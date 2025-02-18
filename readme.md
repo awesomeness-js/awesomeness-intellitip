@@ -3,6 +3,9 @@
 ## 📌 Overview
 Awesomeness Tooltip is a Visual Studio Code extension that provides helpful tooltips for JavaScript files. It extracts schema information based on configured path aliases and displays detailed hover tooltips, making it easier to understand object structures and relationships within your project.
 
+Provides way more information than the default hover, intellisense, or peek definition (even with TS).
+
+
 ## 🚀 Features
 - 📝 **Hover Tooltips**: Displays structured tooltips with schema descriptions, properties, edges, and related key-value pairs.
 - 🔄 **Dynamic Schema Loading**: Fetches schema information dynamically from configured paths.

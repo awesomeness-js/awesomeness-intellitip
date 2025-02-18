@@ -1,7 +1,7 @@
 {
-	"name": "awesomeness",
-	"displayName": "awesomeness",
-	"description": "awesomeness",
+	"name": "awesomeness-intellitip",
+	"displayName": "Awesomeness Intellitip",
+	"description": "Sweet ass tool tips based on your docs",
 	"version": "0.0.1",
 	"type": "commonjs",
 	"main": "./extension.js",

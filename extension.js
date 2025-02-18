@@ -6,7 +6,7 @@ const customStringify = require("./utils/customStringify");
 const loadSchema = require("./utils/loadSchema");
 
 // Create Output Channel for debugging
-const outputChannel = vscode.window.createOutputChannel("Awesomeness Tooltip");
+const outputChannel = vscode.window.createOutputChannel("Awesomeness Intellitip");
 
 // Cache for loaded schemas
 let schemaCache = {};
@@ -17,7 +17,7 @@ let fileWatchers = {};
 
 function activate(context) {
 
-    outputChannel.appendLine("✅ Awesomeness Tooltip Activated!");
+    outputChannel.appendLine("✅ Awesomeness Intellitip Activated!");
     //outputChannel.show();
 
     // Clean up file watchers on deactivation
@@ -116,7 +116,7 @@ function activate(context) {
 }
 
 function deactivate() {
-    outputChannel.appendLine("🛑 Awesomeness Tooltip Deactivated!");
+    outputChannel.appendLine("🛑 Awesomeness Intellitip Deactivated!");
 }
 
 module.exports = { activate, deactivate };
