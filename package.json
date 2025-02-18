@@ -6,6 +6,11 @@
 	"type": "commonjs",
 	"main": "./extension.js",
 	"icon": "icon.png",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/awesomeness-js/awesomeness-intellitip.git"
+	},
+	"publisher": "awesomeness",
 	"engines": {
 		"vscode": "^1.97.0"
 	},
