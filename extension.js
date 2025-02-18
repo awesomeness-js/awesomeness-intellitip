@@ -18,7 +18,7 @@ let fileWatchers = {};
 function activate(context) {
 
     outputChannel.appendLine("✅ Awesomeness Tooltip Activated!");
-    outputChannel.show();
+    //outputChannel.show();
 
     // Clean up file watchers on deactivation
     context.subscriptions.push({
