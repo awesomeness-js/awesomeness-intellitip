@@ -79,14 +79,14 @@ function activate(context) {
                 hoverContent += `\n\`\`\`js\n${customStringify(schema.properties)}\n\`\`\`\n\n`;
             }
 
-            if (schema.edges) {
+            if (schema.edges?.length) {
+
                 hoverContent += `### Edges\n\n`;
-                let edges = Object.keys(schema.edges);
-                if (edges.length) {
-                    edges.forEach((key) => {
-                        hoverContent += ` - ${key}\n\n`;
-                    });
-                }
+    
+                edges.forEach((edge) => {
+                    hoverContent += `${edge[0]} ➡️ ${edge[1]} ➡️ ${edge[2]}\n\n`;
+                });
+                
             }
 
             if (schema.relatedKVs) {

@@ -112,8 +112,9 @@ user {
 
 ```
 ### Edges
- - friend
-
+user ➡️ friend ➡️ user
+user ➡️ liked ➡️ post
+user ➡️ posted ➡️ post
 
 ### Related KVs
 

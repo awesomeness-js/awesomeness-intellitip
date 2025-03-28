@@ -40,9 +40,10 @@ const properties = {
 
 }
 
-const edges = Object.freeze({
-	friend: 'friend'
-});
+const edges = [
+	['user', 'friend', 'user'],
+	['user', 'liked', 'post'],
+];
 
 
 const relatedKVs = {
