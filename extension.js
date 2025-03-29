@@ -4,6 +4,8 @@ const vscode = require("vscode");
 const watchSchemaFile = require("./utils/watchSchemaFile");
 const customStringify = require("./utils/customStringify");
 const loadSchema = require("./utils/loadSchema");
+const edges = require("./utils/edges");
+const kvs = require("./utils/kvs");
 
 // Create Output Channel for debugging
 const outputChannel = vscode.window.createOutputChannel("Awesomeness Intellitip");
@@ -60,31 +62,49 @@ function activate(context) {
                 }
     
                 const schemaPathStart = config.paths[winningPath];
+
                 const schema = await loadSchema(schemaName, schemaPathStart, fileWatchers);
-                if (!schema) {
-                    return;
-                }
+                
+                if (!schema) { return; }
+
+                let hoverContent = `### [${schemaName}](${schema.fileUrl})\n`;
+
+                if(winningPath === '@edges'){ return edges(schema, hoverContent); }
+                if(winningPath === '@kvs'){ return kvs(schema, hoverContent); }
     
-                let hoverContent = `### ${schemaName}\n`;
-    
+
                 if (schema.description) {
                     hoverContent += `\n${schema.description}\n\n`;
                 }
     
+    
                 if (schema.properties) {
+
                     let kvs = [];
                     Object.keys(schema.properties).forEach((key) => {
                         kvs.push(`${key}: ${schema.properties[key].type}`);
                     });
-                    hoverContent += `\n\`\`\`js\n${schemaName} { \n\t${kvs.join('\n\t')}\n }\n\`\`\`\n\n`;
-                    hoverContent += `**Details**\n\n`;
+    
+                    hoverContent += `\`\`\`js\n${schemaName} { \n\t${kvs.join('\n\t')}\n }\n\`\`\`\n`;
+
+
+                    hoverContent += `&nbsp;\n\n`;
+                    hoverContent += `--- \n`;
+                    hoverContent += `&nbsp;\n\n`;
+                    
+                    hoverContent += `### ✍️ Details\n\n`;
                     hoverContent += `\n\`\`\`js\n${customStringify(schema.properties)}\n\`\`\`\n\n`;
+                    hoverContent += `&nbsp;\n\n`;
+
                 }
+
+                hoverContent += `--- \n`;
+                hoverContent += `&nbsp;\n\n`;
+    
     
                 if (schema.edges?.length) {
     
-                    hoverContent += `&nbsp;\n\n`;
-                    hoverContent += `### Edges\n\n`;
+                    hoverContent += `### 🕸️ Edges\n\n\n`;
         
                     schema.edges.forEach((edge) => {
                         hoverContent += `${edge[0]} --- \`${edge[1]}\` --> ${edge[2]}\n\n`;
@@ -92,22 +112,39 @@ function activate(context) {
     
                     hoverContent += `&nbsp;\n\n`;
     
-                    
                 }
     
+                hoverContent += `--- \n`;
+                hoverContent += `&nbsp;\n\n`;
+    
                 if (schema.relatedKVs) {
-                    hoverContent += `### Related KVs\n\n`;
+                    hoverContent += `### 🗝️ Related KVs\n\n`;
                     let relatedKVs = Object.keys(schema.relatedKVs);
                     if (relatedKVs.length) {
                         relatedKVs.forEach((key) => {
                             hoverContent += `\`\`\`js \n\n${key}\n\`\`\`\n `;
                             hoverContent += `\n\n\`\`\`js \n${customStringify(schema.relatedKVs[key])}\n\n\`\`\`\n\n`;
                         });
+                    } else {
+                        hoverContent += `&nbsp;\n\n`;
+                        hoverContent += `No Related KVs Found\n\n`;
+                        hoverContent += `&nbsp;\n\n`;
                     }
                 }
+                
+                hoverContent += `--- \n`;
+                hoverContent += `&nbsp;\n\n`;
+    
     
                 Object.keys(schema).forEach((key) => {
-                    if (["properties", "edges", "name", "description", "relatedKVs"].includes(key)) {
+                    if ([
+                        "properties", 
+                        "edges", 
+                        "name", 
+                        "description", 
+                        "relatedKVs",
+                        "fileUrl",
+                    ].includes(key)) {
                         return;
                     }
                     hoverContent += `\n**${key}**\n\n\`js \n${JSON.stringify(schema[key], null, '\t')}\n\`\`\`\n\n`;

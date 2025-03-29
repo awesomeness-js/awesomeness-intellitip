@@ -22,9 +22,11 @@ module.exports = async function loadSchema(schemaName, schemaPathStart, fileWatc
     try {
 
         // Append a timestamp query parameter to bypass the ESM cache.
-        const fileUrl = pathToFileURL(schemaPath).href + `?t=${new Date().getTime()}`;
+        const fileUrl_main = pathToFileURL(schemaPath).href;
+        const fileUrl = fileUrl_main + `?t=${new Date().getTime()}`;
         const schemaModule = await import(fileUrl);
         const schema = schemaModule.default || {};
+        schema.fileUrl = fileUrl_main;
         schemaCache[schemaName] = schema;
         watchSchemaFile(schemaPath, schemaName, fileWatchers);
         return schema;
