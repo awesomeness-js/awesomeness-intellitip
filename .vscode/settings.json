@@ -1,0 +1,18 @@
+{
+	"editor.tabSize": 4,
+	"editor.detectIndentation": false,
+	"editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.fixAll.eslint": "explicit"
+    },
+	"eslint.workingDirectories": [{ "mode": "auto" }],
+	"eslint.ignorePatterns": ["node_modules", "dist", "build"],
+	"awesomeness": {
+		"paths": {
+			"@schemas": "examples/schemas",
+		},
+		"components": {
+			"@ui": "examples/components",
+		},
+	}
+}

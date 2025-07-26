@@ -1,28 +1,26 @@
 const vscode = require("vscode");
+const path = require("path");
+const fs = require("fs");
+const { pathToFileURL } = require("url");
 
-// our utils
+// utils
 const watchSchemaFile = require("./utils/watchSchemaFile");
+const loadTargetModule = require("./utils/loadTargetModule");
 const customStringify = require("./utils/customStringify");
-const loadSchema = require("./utils/loadSchema");
-const edges = require("./utils/edges");
-const kvs = require("./utils/kvs");
+const parseTriggerFromLine = require("./utils/parseTriggerFromLine");
+const buildHoverContent = require("./utils/buildHoverContent");
+const { initLogger, log } = require("./utils/log");
 
-// Create Output Channel for debugging
+// Output Channel
 const outputChannel = vscode.window.createOutputChannel("Awesomeness Intellitip");
 
-// Cache for loaded schemas
+// Cache + Watchers
 let schemaCache = {};
-
-// Store file watchers for schema files
 let fileWatchers = {};
 
-
 function activate(context) {
-
     outputChannel.appendLine("✅ Awesomeness Intellitip Activated!");
-    //outputChannel.show();
 
-    // Clean up file watchers on deactivation
     context.subscriptions.push({
         dispose() {
             Object.values(fileWatchers).forEach(watcher => watcher.close());
@@ -31,134 +29,67 @@ function activate(context) {
     });
 
     const hoverProvider = vscode.languages.registerHoverProvider("javascript", {
-
         async provideHover(document, position) {
-
             try {
-
                 const config = vscode.workspace.getConfiguration("awesomeness");
-                const paths = Object.keys(config.paths);
+                initLogger(config);
+
                 const line = document.lineAt(position.line).text;
-    
-                let schemaName = null;
-                let winningPath = null;
-    
-                for (const p of paths) {
-                    // Escape any regex special characters in path if necessary
-                    const escapedPath = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    // Regex: " <path> " followed by one or more whitespace characters and then a word
-                    const regex = new RegExp(` ${escapedPath}\\s+(\\S+)`);
-                    const pathMatches = line.match(regex);
-    
-                    if (pathMatches) {
-                        schemaName = pathMatches[1];
-                        winningPath = p;
-                        break;
-                    }
-                }
-    
-                if (!schemaName) { 
-                    return; 
-                }
-    
-                const schemaPathStart = config.paths[winningPath];
 
-                const schema = await loadSchema(schemaName, schemaPathStart, fileWatchers);
-                
-                if (!schema) { return; }
+                const {
+                    targetName,
+                    postfixCommand,
+                    triggerKey,
+                    triggerType,
+                    customTypeKey
+                } = parseTriggerFromLine({ line, position, outputChannel });
 
-                let hoverContent = `### [${schemaName}](${schema.fileUrl})\n`;
+                if (!targetName || !triggerKey || !triggerType) return;
 
-                if(winningPath === '@edges'){ return edges(schema, hoverContent); }
-                if(winningPath === '@kvs'){ return kvs(schema, hoverContent); }
-    
+                let basePath = null;
+                let contentFunctionLocation = null;
 
-                if (schema.description) {
-                    hoverContent += `\n${schema.description}\n\n`;
-                }
-    
-    
-                if (schema.properties) {
+                if (triggerType === "customTypes") {
+                    const customType = config.customTypes?.[customTypeKey];
+                    if (!customType) return;
 
-                    let kvs = [];
-                    Object.keys(schema.properties).forEach((key) => {
-                        kvs.push(`${key}: ${schema.properties[key].type}`);
-                    });
-    
-                    hoverContent += `\`\`\`js\n${schemaName} { \n\t${kvs.join('\n\t')}\n }\n\`\`\`\n`;
+                    basePath = customType.triggers?.[triggerKey];
+                    contentFunctionLocation = customType.contentFunctionLocation;
 
-
-                    hoverContent += `&nbsp;\n\n`;
-                    hoverContent += `--- \n`;
-                    hoverContent += `&nbsp;\n\n`;
-                    
-                    hoverContent += `### ✍️ Details\n\n`;
-                    hoverContent += `\n\`\`\`js\n${customStringify(schema.properties)}\n\`\`\`\n\n`;
-                    hoverContent += `&nbsp;\n\n`;
-
+                } else {
+                    basePath = config[triggerType]?.[triggerKey];
+                    if (!basePath) return;
                 }
 
-                hoverContent += `--- \n`;
-                hoverContent += `&nbsp;\n\n`;
-    
-    
-                if (schema.edges?.length) {
-    
-                    hoverContent += `### 🕸️ Edges\n\n\n`;
-        
-                    schema.edges.forEach((edge) => {
-                        hoverContent += `${edge[0]} --- \`${edge[1]}\` --> ${edge[2]}\n\n`;
-                    });
-    
-                    hoverContent += `&nbsp;\n\n`;
-    
-                }
-    
-                hoverContent += `--- \n`;
-                hoverContent += `&nbsp;\n\n`;
-    
-                if (schema.relatedKVs) {
-                    hoverContent += `### 🗝️ Related KVs\n\n`;
-                    let relatedKVs = Object.keys(schema.relatedKVs);
-                    if (relatedKVs.length) {
-                        relatedKVs.forEach((key) => {
-                            hoverContent += `\`\`\`js \n\n${key}\n\`\`\`\n `;
-                            hoverContent += `\n\n\`\`\`js \n${customStringify(schema.relatedKVs[key])}\n\n\`\`\`\n\n`;
-                        });
-                    } else {
-                        hoverContent += `&nbsp;\n\n`;
-                        hoverContent += `No Related KVs Found\n\n`;
-                        hoverContent += `&nbsp;\n\n`;
-                    }
-                }
-                
-                hoverContent += `--- \n`;
-                hoverContent += `&nbsp;\n\n`;
-    
-    
-                Object.keys(schema).forEach((key) => {
-                    if ([
-                        "properties", 
-                        "edges", 
-                        "name", 
-                        "description", 
-                        "relatedKVs",
-                        "fileUrl",
-                    ].includes(key)) {
-                        return;
-                    }
-                    hoverContent += `\n**${key}**\n\n\`js \n${JSON.stringify(schema[key], null, '\t')}\n\`\`\`\n\n`;
+                // 🔽 Load the target module (component or schema)
+                const data = await loadTargetModule({
+                    targetName,
+                    basePath,
+                    triggerType,
+                    fileWatchers,
+                    outputChannel,
+                    customTypeKey 
                 });
-    
+
+                if (!data) {
+                    log(outputChannel, `❌ No data found for ${triggerType} "${triggerKey}" with target "${targetName}"`);
+                    return;
+                }
+
+                // 🔽 Normal schema/uiComponent hover
+                const hoverContent = await buildHoverContent({
+                    targetName,
+                    data,
+                    triggerType,
+                    outputChannel,
+                    postfixCommand,
+                    contentFunctionLocation
+                });
+
                 return new vscode.Hover(new vscode.MarkdownString(hoverContent, true));
-
-                
-            } catch (err){
-                outputChannel.appendLine(`Error: ${err.message}`);
-            };
-            
-
-
+            } catch (err) {
+                log(outputChannel, `❌ Error: ${err.message}`);
+            }
         }
     });
 

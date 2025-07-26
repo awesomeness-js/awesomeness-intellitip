@@ -1,5 +1,5 @@
 const vscode = require("vscode");
-const customStringify = require("./customStringify");
+const customStringify = require("../customStringify");
 
 module.exports = (schema, hoverContent = "") => {
     
@@ -24,6 +24,6 @@ module.exports = (schema, hoverContent = "") => {
         hoverContent += `&nbsp;\n\n`;
     }
 
-    return new vscode.Hover(new vscode.MarkdownString(hoverContent, true));
+    return hoverContent;
 
 }

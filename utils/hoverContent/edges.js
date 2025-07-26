@@ -16,6 +16,6 @@ module.exports = (schema, hoverContent = "") => {
 
     }
 
-    return new vscode.Hover(new vscode.MarkdownString(hoverContent, true));
+    return hoverContent;
 
 }

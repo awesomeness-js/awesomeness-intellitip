@@ -24,15 +24,22 @@
 		"configuration": {
 			"title": "Awesomeness Configuration",
 			"properties": {
-				"paths": {
-					"type": "object",
-					"description": "Mapping for path aliases",
-					"default": {
-						"@docs": "schemas",
-						"@vertices": "api/schemas",
-						"@edges": "api/edges"
-					}
-				}
+				"schemas": {
+					"@schemas": "schemas"
+				},
+				"uiComponents": {
+					"@ui": "awesomeness-ui/components"
+				},
+                "customTypes":{
+                    "thing":{
+                        "description": "A custom type for things",
+                        "_info": true,
+                        "triggers": {
+                            "@thing": "custom-types/thing"
+                        },
+                        "contentFunctionLocation": "./project-root/some/place/thing.js"
+                    }
+                }
             }
 		},
 		"languages": [{

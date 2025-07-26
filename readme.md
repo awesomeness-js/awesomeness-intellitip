@@ -18,11 +18,14 @@ This extension requires configuring path aliases to locate schema files. You can
 
 ```json
 {
-  "awesomeness.paths": {
-    "@docs": "schemas",
-    "@vertices": "api/schemas",
-    "@edges": "api/edges"
-  }
+  "awesomeness": {
+    "schemas": {
+			"@schemas": "schemas",
+    },
+		"uiComponents": {
+			"@ui": "awesomeness-ui/components",
+		},
+	}
 }
 ```
 
@@ -30,7 +33,7 @@ This extension requires configuring path aliases to locate schema files. You can
 put a comment anywhere and see docs
 ```js
 
-// @docs user <-- hover over and watch the magic happen
+// @schemas user <-- hover over and watch the magic happen
 let user = {
 
 };
@@ -45,7 +48,7 @@ While Schemas can be any object structure, the following keys have special keys:
  - **edges**: the edges of a schema (vertices that are connected to this schema)
  - **relatedKVs**: the key-value pairs related to this schema
 
-See [example schema](examples/userSchema.js) for a full example.
+See [example schema](examples/schemas/user.js) for a full example.
 
 # Example Hover Display
 
