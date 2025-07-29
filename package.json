@@ -20,32 +20,35 @@
 	"activationEvents": [
 		"onLanguage:javascript"
 	],
-	"contributes": { 
-		"configuration": {
-			"title": "Awesomeness Configuration",
-			"properties": {
-				"schemas": {
-					"@schemas": "schemas"
-				},
-				"uiComponents": {
-					"@ui": "awesomeness-ui/components"
-				},
-                "customTypes":{
-                    "thing":{
-                        "description": "A custom type for things",
-                        "_info": true,
-                        "triggers": {
-                            "@thing": "custom-types/thing"
-                        },
-                        "contentFunctionLocation": "./project-root/some/place/thing.js"
-                    }
+	"contributes": {
+        "configuration": {
+            "title": "Awesomeness Intellitip",
+            "properties": {
+            "awesomeness": {
+                "type": "object",
+                "default": {},
+                "description": "Root config for Awesomeness Intellitip",
+                "properties": {
+                "debug": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable debug logging"
+                },
+                "schemas": {
+                    "type": "object",
+                    "default": {},
+                    "description": "Schema mappings"
+                },
+                "components": {
+                    "type": "object",
+                    "default": {},
+                    "description": "Component mappings"
+                }
                 }
             }
-		},
-		"languages": [{
-			"id": "javascript"
-		}]
-	},
+            }
+        }
+    },
 	"devDependencies": {
 		"@types/vscode": "^1.97.0",
 		"@types/mocha": "^10.0.10",

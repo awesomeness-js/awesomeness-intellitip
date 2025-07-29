@@ -4,12 +4,12 @@ const fs = require("fs");
 const { pathToFileURL } = require("url");
 
 // utils
-const watchSchemaFile = require("./utils/watchSchemaFile");
 const loadTargetModule = require("./utils/loadTargetModule");
 const customStringify = require("./utils/customStringify");
 const parseTriggerFromLine = require("./utils/parseTriggerFromLine");
 const buildHoverContent = require("./utils/buildHoverContent");
 const { initLogger, log } = require("./utils/log");
+const replaceSchemasWithLinks = require("./utils/replaceSchemasWithLinks");
 
 // Output Channel
 const outputChannel = vscode.window.createOutputChannel("Awesomeness Intellitip");
@@ -29,8 +29,11 @@ function activate(context) {
     });
 
     const hoverProvider = vscode.languages.registerHoverProvider("javascript", {
+
         async provideHover(document, position) {
+
             try {
+                
                 const config = vscode.workspace.getConfiguration("awesomeness");
                 initLogger(config);
 
@@ -42,28 +45,25 @@ function activate(context) {
                     triggerKey,
                     triggerType,
                     customTypeKey
-                } = parseTriggerFromLine({ line, position, outputChannel });
+                } = parseTriggerFromLine({ 
+                    line,
+                    position, 
+                    outputChannel 
+                });
 
                 if (!targetName || !triggerKey || !triggerType) return;
 
                 let basePath = null;
                 let contentFunctionLocation = null;
 
-                if (triggerType === "customTypes") {
-                    const customType = config.customTypes?.[customTypeKey];
-                    if (!customType) return;
-
-                    basePath = customType.triggers?.[triggerKey];
-                    contentFunctionLocation = customType.contentFunctionLocation;
-
-                } else {
-                    basePath = config[triggerType]?.[triggerKey];
-                    if (!basePath) return;
-                }
+                basePath = config[triggerType]?.[triggerKey];
+                if (!basePath) return;
+            
 
                 // 🔽 Load the target module (component or schema)
                 const data = await loadTargetModule({
                     targetName,
+                    triggerKey,
                     basePath,
                     triggerType,
                     fileWatchers,
@@ -71,14 +71,16 @@ function activate(context) {
                     customTypeKey 
                 });
 
+
                 if (!data) {
                     log(outputChannel, `❌ No data found for ${triggerType} "${triggerKey}" with target "${targetName}"`);
                     return;
                 }
 
-                // 🔽 Normal schema/uiComponent hover
-                const hoverContent = await buildHoverContent({
+                let hoverContent = await buildHoverContent({
                     targetName,
+                    triggerKey,
+                    basePath,
                     data,
                     triggerType,
                     outputChannel,
@@ -86,9 +88,20 @@ function activate(context) {
                     contentFunctionLocation
                 });
 
+                hoverContent = replaceSchemasWithLinks({
+                    hoverContent,
+                    config,
+                    log,
+                    outputChannel
+                });
+
+
                 return new vscode.Hover(new vscode.MarkdownString(hoverContent, true));
+
             } catch (err) {
+
                 log(outputChannel, `❌ Error: ${err.message}`);
+
             }
         }
     });

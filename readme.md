@@ -19,29 +19,95 @@ This extension requires configuring path aliases to locate schema files. You can
 ```json
 {
   "awesomeness": {
-    "schemas": {
-			"@schemas": "schemas",
-    },
-		"uiComponents": {
-			"@ui": "awesomeness-ui/components",
-		},
-	}
+        "schemas": { // will look for a file in that directory with the target name
+            "@schemas": "schemas",
+        },
+        "components": { 
+            "@ui": "awesomeness-ui/components",
+            "ui": "awesomeness-ui/components",
+            "app": "api/functions",
+        },
+    }
 }
 ```
 
 ## 🎯 Usage
-put a comment anywhere and see docs
-```js
 
-// @schemas user <-- hover over and watch the magic happen
-let user = {
+If you're using `awesomeness-ui` components or `awesomeness-api/routes`, each component or route should ideally live in its own folder with either a `readme.md` or `_info.js` file to describe it.
 
-};
 
+#### 🔧 Example Config: `.vscode/settings.json`
+
+```json
+{
+  "awesomeness": {
+    "debug": true,
+    "schemas": {
+      "@schemas": "schemas"
+    },
+    "components": {
+      "ui": "awesomeness-ui/components",
+      "app": "api/functions"
+    }
+  }
+}
 ```
 
+---
+
+### 📚 File Resolution Priority
+
+For **components** (like those in `awesomeness-ui/components` or `api/functions`):
+
+- If the reference is shallow (e.g. `ui._example()`):
+  1. `awesomeness-ui/example/readme.md`
+  2. `awesomeness-ui/example/_info.js`
+
+- If the reference is nested (e.g. `ui._example.subComponent()`):
+  1. `awesomeness-ui/example/subComponent.md`
+  2. `awesomeness-ui/example/subComponent/readme.md`
+  3. `awesomeness-ui/example/subComponent/_info.js`
+
+For **schemas** (like those in `schemas`), the lookup directly resolves to:
+- `schemas/mySchema.js`
+
+
+
+### 🧑‍💻 Example Usage
+```js
+// FRONT END
+import ui from '#ui';
+
+// will look for:
+// 1. awesomeness-ui/example/readme.md
+// 2. awesomeness-ui/example/_info.js
+const test = ui._example();
+
+// will look for:
+// 1. awesomeness-ui/example/subComponent.md
+// 2. awesomeness-ui/example/subComponent/readme.md
+// 3. awesomeness-ui/example/subComponent/_info.js
+const testGrid = ui._example.subComponent();
+
+// will look for:
+// 1. awesomeness-ui/example/subComponent/deep.md
+// 2. awesomeness-ui/example/subComponent/deep/readme.md
+// 3. awesomeness-ui/example/subComponent/deep/_info.js
+const $subDeep = ui._example.subComponent.deep();
+```
+
+### Basic Example
+![](./images/example.png)
+
+### Backend Component
+![](./images/component-backend.png)
+
+### Component with Image
+![](./images/component-with-image.png)
+
+
 ## 📑 Schemas
-While Schemas can be any object structure, the following keys have special keys:
+While Schemas can be any object structure, the following keys have special meaning and display in the hover:
  - **name**: the name of a schema
  - **description**: the description of a schema
  - **properties**: the properties of a schema
@@ -67,6 +133,8 @@ user {
  }
 
 ```
+![](./images/schema.png)
+![](./images/schema2.png)
 
 ### Details
 ```js
@@ -114,8 +182,13 @@ user {
 }
 
 ```
+
+![](./images/schema-details.png)
+
 ### Edges
 user -- friend --> user
+
+![](./images/schema-edges.png)
 
 
 ### Related KVs
@@ -135,3 +208,5 @@ user::{{ application.id }}::phone::{{ user.phone }}
   example: "00000000-0000-0000-0000-000000000000"
 }
 ```
+
+![](./images/schema-kv.png)

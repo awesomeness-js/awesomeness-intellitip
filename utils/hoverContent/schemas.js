@@ -53,7 +53,16 @@ module.exports = ({
     hoverContent += `--- \n&nbsp;\n\n`;
 
     Object.keys(data).forEach((key) => {
-        if (["properties", "edges", "name", "description", "relatedKVs", "fileUrl"].includes(key)) return;
+        if ([
+            "properties", 
+            "edges", 
+            "name", 
+            "description", 
+            "relatedKVs", 
+            "fileUrl",
+            "fileUri",
+            "filePath"
+        ].includes(key)) return;
         hoverContent += `\n**${key}**\n\n\`\`\`js\n${JSON.stringify(data[key], null, '\t')}\n\`\`\`\n\n`;
     });
 

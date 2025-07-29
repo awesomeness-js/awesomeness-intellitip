@@ -11,47 +11,119 @@ const { pathToFileURL } = require("url");
 
 async function buildHoverContent({
     targetName, 
+    triggerKey,
     data,
+    basePath,
     triggerType,
     outputChannel,
     postfixCommand,
     contentFunctionLocation
 }) {
     
-    log(outputChannel, `🔍 Building hover content for ${targetName} (${triggerType})`);
+    let targetArray = Array.isArray(targetName);
+
+    // log(outputChannel, `🔍 Building hover content for ${targetName} (${triggerType})`);
+
+       
+    // show data keys
+    // log(outputChannel, `🔍 Data keys: ${Object.keys(data).join(", ")}`);
 
 
-    // 🔽 For customTypes, dynamically call the hover builder function
-    if (triggerType === "customTypes" && contentFunctionLocation) {
-
-        const absFnPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, contentFunctionLocation);
+    if(data?.hoverTip){
         
-        if (!fs.existsSync(absFnPath)) {
-            
-            log(outputChannel, `❌ Hover builder not found: ${absFnPath} - using generic hover instead`);
+        log(outputChannel, `🔍 Using hoverTip data for ${targetName}`);
+       
+        const workspaceFolders = vscode.workspace.workspaceFolders;
 
-        } else {
+        if (!workspaceFolders?.length) {
+            log(outputChannel, `❌ No workspace folder found`);
+            return null;
+        }
+    
+        const root = workspaceFolders[0].uri.fsPath;
+        
+        let jsFn = null;
 
-            const fileUrl = pathToFileURL(absFnPath).href + `?t=${Date.now()}`;
-            const hoverModule = await import(fileUrl);
-            const customHoverFn = hoverModule.default;
+        // is this md or js?
+        if (typeof data.hoverTip === "string") {
 
-            if (typeof customHoverFn !== "function") {
-                log(outputChannel, `❌ contentFunctionLocation must export a function`);
-                return;
+            const filePath = path.join(root, basePath, targetName, data.hoverTip);
+
+            if(data.hoverTip.endsWith(".md")){
+                
+        
+                log(outputChannel, `🔍 Using hoverTip markdown for ${targetName}`);
+                
+                if (fs.existsSync(filePath)) {
+                    let content = `### [${targetName}](${data.fileUrl})\n`;
+                    content += fs.readFileSync(filePath, "utf8");
+                    log(outputChannel, `✅ Loaded hoverTip markdown ${content}`);
+                    return content;
+                }
+
+                log(outputChannel, `❌ hoverTip file does not exist: ${filePath}`);
+
             }
 
-            return customHoverFn({
-                targetName,
-                data,
-                postfixCommand
-            });
+
+            if (data.hoverTip.endsWith(".js")) {
+                
+                log(outputChannel, `🔍 Using hoverTip JS for ${targetName}`);
+                
+                try {
+
+                    // Use require for CommonJS modules
+                    const mod = require(filePath);
+                    
+                    jsFn = mod.default || mod;
+
+                } catch (err) {
+
+                    log(outputChannel, `❌ Error loading hoverTip JS: ${err.message}`);
+
+                }
+
+            }
+            
+        } else if (typeof data.hoverTip === "function") {
+
+            jsFn = data.hoverTip;
+        
+        }
+
+        log(outputChannel, `🔍 HoverTip function: ${typeof jsFn} `);
+
+        if(typeof jsFn === "function") {
+
+            log(outputChannel, `🔍 Executing hoverTip function for ${targetName}`);
+
+            try {
+                const result = await jsFn({
+                    targetName, 
+                    data,
+                    basePath,
+                    triggerType,
+                    outputChannel,
+                    postfixCommand,
+                    contentFunctionLocation
+                });
+                
+                return `### [${targetName}](${data.fileUrl})\n` + result;
+
+            } catch (err) {
+                log(outputChannel, `❌ Error executing hoverTip function: ${err.message}`);
+            }
 
         }
 
     }
 
+    if(data.md){
 
+        log(outputChannel, `🔍 Using markdown content for ${targetName}`);
+        return `### [${ data.name ? data.name : targetName}](${data.fileUrl})\n` + data.md;
+
+    }
 
     if (postfixCommand === "edges") {
         return edges(data, `### [${targetName}](${data.fileUrl})\n`);
@@ -70,6 +142,8 @@ async function buildHoverContent({
             postfixCommand
         });
     }
+
+    log(outputChannel, `🔍 Using generic hover content for ${targetName}`);
 
     return generic({
         targetName, 

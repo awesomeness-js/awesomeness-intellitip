@@ -8,7 +8,7 @@ module.exports = ({
     postfixCommand
 }) => {
     
-    let hoverContent = `### [${targetName}](${data.fileUrl})\n`;
+    let hoverContent = `### [${typeof targetName === 'string' ? targetName : targetName.join('.')}](${data.fileUrl})\n`;
 
     if (data.description) {
         hoverContent += `\n${data.description}\n\n`;

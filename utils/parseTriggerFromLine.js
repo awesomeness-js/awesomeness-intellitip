@@ -2,26 +2,47 @@ const vscode = require("vscode");
 const { log } = require("./log");
 
 function parseTriggerFromLine({ line, position, outputChannel }) {
+    
     const config = vscode.workspace.getConfiguration("awesomeness");
 
     const sections = {
         schemas: config.schemas || {},
-        uiComponents: config.uiComponents || {},
+        components: config.components || {},
     };
 
-    // Flatten customTypes triggers into section-style format
-    const customTypes = config.customTypes || {};
-    for (const [typeName, def] of Object.entries(customTypes)) {
-        if (def.triggers) {
-            sections[`customTypes:${typeName}`] = def.triggers;
-        }
-    }
-
     for (const [sectionKey, triggerMap] of Object.entries(sections)) {
+
         for (const triggerKey of Object.keys(triggerMap)) {
+            
+            const hasNoAt = !triggerKey.includes('@');
+
+            if (hasNoAt) {
+            
+                // does line contain a prefix?
+                const parts = extractPathByPrefix(line, triggerKey);
+
+                if(parts.length > 0) {
+
+                    log(outputChannel, `✅ Match found in ${triggerKey} part: ${parts.join(', ')}`);
+
+                    return parseResult({
+                        sectionKey, 
+                        triggerKey, 
+                        targetName: parts,
+                        postfixCommand: null
+                    });
+
+
+                }
+
+            }
+            
+           
+
             const escapedPath = triggerKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(`${escapedPath}\\s+(\\S+)((?:\\s+(?:--|-)(?:kv|kvs|edge|edges))*)`, 'gi');
-            log(outputChannel, `🔍 Testing [${sectionKey}] regex: ${regex} against "${line}"`);
+        
+
 
             let match;
             while ((match = regex.exec(line)) !== null) {
@@ -39,11 +60,19 @@ function parseTriggerFromLine({ line, position, outputChannel }) {
                 if (cursorChar >= targetStart && cursorChar <= targetEnd) {
                     log(outputChannel, `🎯 Cursor is over target: "${matchedTarget}"`);
 
-                    return parseResult(sectionKey, triggerKey, matchedTarget, null);
+                    return parseResult({
+                        sectionKey, 
+                        triggerKey, 
+                        targetName: matchedTarget, 
+                        postfixCommand: null
+                    });
+
                 }
 
                 const postfixMatches = [...postfixChunk.matchAll(/(?:--|-)(kv|kvs|edge|edges)/g)];
+
                 for (const pm of postfixMatches) {
+
                     const raw = pm[1];
                     const normalized = raw.startsWith('kv') ? 'kv' : 'edges';
                     const postfixOffset = match[0].indexOf(pm[0], targetOffset + matchedTarget.length);
@@ -55,13 +84,22 @@ function parseTriggerFromLine({ line, position, outputChannel }) {
                     if (cursorChar >= postfixStart && cursorChar <= postfixEnd) {
                         log(outputChannel, `🎯 Cursor is over postfix "${normalized}"`);
 
-                        return parseResult(sectionKey, triggerKey, matchedTarget, normalized);
+                        return parseResult({
+                            sectionKey, 
+                            triggerKey, 
+                            targetName: matchedTarget, 
+                            postfixCommand: normalized
+                        });
                     }
+
                 }
 
                 log(outputChannel, `🚫 No cursor match inside this trigger line`);
+
             }
+
         }
+
     }
 
     return {
@@ -73,17 +111,12 @@ function parseTriggerFromLine({ line, position, outputChannel }) {
     };
 }
 
-function parseResult(sectionKey, triggerKey, targetName, postfixCommand) {
-    if (sectionKey.startsWith("customTypes:")) {
-        const [, customTypeKey] = sectionKey.split(":");
-        return {
-            targetName,
-            postfixCommand,
-            triggerKey,
-            triggerType: "customTypes",
-            customTypeKey
-        };
-    }
+function parseResult({
+    sectionKey, 
+    triggerKey, 
+    targetName, 
+    postfixCommand
+}) {
 
     return {
         targetName,
@@ -92,6 +125,19 @@ function parseResult(sectionKey, triggerKey, targetName, postfixCommand) {
         triggerType: sectionKey,
         customTypeKey: null
     };
+
 }
+
+const extractPathByPrefix = (text, triggerKey) => {
+    const escaped = triggerKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape trigger for regex
+    const regex = new RegExp(`${escaped}\\.([\\w\\d.]+)`);
+    const match = text.match(regex);
+    if (!match) return [];
+
+    return match[1]
+        .replace(/[();]+$/g, '') // strip trailing semicolons or parens
+        .split('.')
+        .filter(Boolean);
+};
 
 module.exports = parseTriggerFromLine;

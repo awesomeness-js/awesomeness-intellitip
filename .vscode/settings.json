@@ -6,13 +6,5 @@
         "source.fixAll.eslint": "explicit"
     },
 	"eslint.workingDirectories": [{ "mode": "auto" }],
-	"eslint.ignorePatterns": ["node_modules", "dist", "build"],
-	"awesomeness": {
-		"paths": {
-			"@schemas": "examples/schemas",
-		},
-		"components": {
-			"@ui": "examples/components",
-		},
-	}
+	"eslint.ignorePatterns": ["node_modules", "dist", "build"]
 }
