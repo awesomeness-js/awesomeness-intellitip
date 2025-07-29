@@ -2,7 +2,7 @@
 	"name": "awesomeness-intellitip",
 	"displayName": "Awesomeness Intellitip",
 	"description": "Sweet ass tool tips based on your docs",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"type": "commonjs",
 	"main": "./extension.js",
 	"icon": "icon.png",
