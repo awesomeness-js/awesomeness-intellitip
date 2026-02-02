@@ -6,86 +6,92 @@ Awesomeness Tooltip is a Visual Studio Code extension that provides helpful tool
 Provides way more information than the default hover, intellisense, or peek definition (even with TS).
 
 
+## 🥱 TLDR;
+
+If you want to provide 100% custom tooltips based on custom MD, or Awesomeness Schema files or Awesomeness _info.js files, this is the extension for you.
+
+You can do something like this:
+
+Anytime the cursor hovers over a line that has `ui.anthing()` you will get a custom tool tip! (**Yeah it can be 100% MD**)
+
+
+
 ## 🚀 Features
-- 📝 **Hover Tooltips**: Displays structured tooltips with schema descriptions, properties, edges, and related key-value pairs.
-- 🔄 **Dynamic Schema Loading**: Fetches schema information dynamically from configured paths.
-- 🖥 **Customizable Configuration**: Supports custom path mappings for schema locations.
-- 📡 **Efficient Caching & Watching**: Utilizes caching and file watching to enhance performance.
-- 📢 **Debugging Output Channel**: Provides logs in a dedicated "Awesomeness Tooltip" output channel.
 
-## 🛠 Configuration
+📝 **Hover Tooltips**: Displays structured tooltips with schema descriptions, properties, edges, and related key-value pairs.
 
-There are 2 places you can define a config
-1. Project config file: `.awesomeness/config.js` (preferred)
-2. VS Code settings: `settings.json` (fallback)
+🔄 **Dynamic Schema Loading**: Fetches schema information dynamically from configured paths.
 
-This extension requires configuring path aliases to locate schema files. You can set these mappings in your VS Code settings (`settings.json`):
+🖥 **Customizable Configuration**: Supports custom path mappings for schema locations.
 
-### Example .vscode/settings.json
+📡 **Efficient Caching & Watching**: Utilizes caching and file watching to enhance performance.
+
+📢 **Debugging Output Channel**: Provides logs in a dedicated "Awesomeness Tooltip" output channel.
+
+
+## 🛠️ Configuration
+
+Project config file: `.awesomeness/config.js`
+
+*As a fallback, you can also configure via: `settings.json`
+But this makes it so you cannot have a dynamic tipMap for site-specific components.*
+
+### Example .awesomeness/config.js
 
 ```js
 export default {
+
+    // Enable debug logging
+    // turns on Awesomeness Intellitip output channel
+    // turns on additional Awesomeness Server logs
     debug: true,
+
+    siteDir__URL: new URL('../sites/', import.meta.url),
+    
     schemas: {
       "@schemas": "schemas"
     },
-    components: {
-        "ui": [ // can be array or string
-            "awesomeness-ui/components", 
-            "awesomeness-ui/components2"
-        ],
-        "app": "api/functions" // can be simple string
+
+
+    // can be strings 
+    // arrays of strings
+    // arrays of URLs
+    // or a function that returns an array of URLs
+
+    // each key is used as the trigger word in your code
+
+    tipMap: {
+        app: "api/functions",
+        ui:  ({ site }) => {
+            // build a site-specific base URL relative to the config file
+            const siteURL = new URL(`../sites/${site}/`, import.meta.url);
+            return [
+            new URL('./components/', siteURL), // site-first
+            new URL('../awesomeness-ui/components/', import.meta.url) // fallback
+            ];
+        }
     },
-    componentLocations: (site) => {
-        // build a site-specific base URL relative to the config file
-        const siteURL = new URL(`../sites/${site}/`, import.meta.url);
-        return [
-        new URL('./components/', siteURL), // site-first
-        new URL('../awesomeness-ui/components/', import.meta.url) // fallback
-        ];
-    }
+
 };
 ```
 
-**Project Config: componentLocations**
+**How dynamic tipMap function works**
 
-- **Signature:** `componentLocations(site)` — the loader will call this with the detected `site` string (or `null` when no site can be determined).
-- **Return value:** an Array of `URL` objects (preferred). Returning `URL` objects avoids ambiguity and path resolution issues; strings are tolerated but less robust.
-- **Behavior:** the loader prefers the returned locations (first match wins). Items outside the workspace are filtered out and logged. If `site` is `null`, site-specific locations should be skipped.
+Function are passes an object with the `site` parameter.
 
+If you are in a file within `siteDir__URL`, 
+e.g. `../sites/mysite/pages/home.js`, 
+the `site` parameter will be `mysite`.
 
+This way you can have site-specific components loaded first, and then fallback to shared components.
 
-This contract keeps `componentLocations` simple and explicit: implementors construct proper `URL` values and the extension converts and validates them.
-
-
-### Example .vscode/settings.json
-
-```json
-{
-  "awesomeness": {
-    "schemas": { // will look for a file in that directory with the target name
-      "@schemas": "schemas"
-    },
-    "components": {
-      // can be a single string or an array of paths (first match wins)
-      "ui": ["awesomeness-ui/components", "awesomeness-ui/components2"],
-      "app": "api/functions"
-    }
-  }
-}
-```
 
 ## 🎯 Usage
 
-If you're using `awesomeness-ui` components or `awesomeness-api/routes`, each component or route should ideally live in its own folder with either a `readme.md` or `_info.js` file to describe it.
+Each component, be it an `awesomeness-ui` component or `awesomeness-api/routes` should live in its own folder with either a `readme.md` or `_info.js` file to describe it.
 
-
-**Project config loading (priority)**
-
-The extension prefers a project config file at `.awesomeness/config.js` as the primary configuration source. If that file is absent, workspace `settings.json` (`awesomeness` section) is used as an optional fallback. When both exist, project config values override workspace settings. The check below:
 
 ---
-
 
 
 ### 📚 File Resolution Priority

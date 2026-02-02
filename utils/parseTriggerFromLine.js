@@ -1,13 +1,11 @@
 const vscode = require("vscode");
 const { log } = require("./log");
 
-function parseTriggerFromLine({ line, position, outputChannel }) {
+function parseTriggerFromLine({ line, position, outputChannel, config }) {
     
-    const config = vscode.workspace.getConfiguration("awesomeness");
-
     const sections = {
         schemas: config.schemas || {},
-        components: config.components || {},
+        tipMap: config.tipMap || {},
     };
 
     for (const [sectionKey, triggerMap] of Object.entries(sections)) {

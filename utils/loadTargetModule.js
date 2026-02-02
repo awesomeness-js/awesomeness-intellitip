@@ -43,7 +43,7 @@ module.exports = async function loadTargetModule({
 
         const tryPaths = [];
 
-        if (triggerType === "components") {
+        if (triggerType === "tipMap") {
             tryPaths.push(
                 path.join(dir, `${last}.md`),
                 path.join(dir, last, `readme.md`),

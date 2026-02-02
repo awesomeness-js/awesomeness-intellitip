@@ -17,12 +17,12 @@ async function loadProjectConfig({ outputChannel } = {}) {
     try {
         workspaceCfg.debug = !!vsConfig.get('debug');
         workspaceCfg.schemas = vsConfig.get('schemas') || {};
-        workspaceCfg.components = vsConfig.get('components') || {};
+        workspaceCfg.tipMap = vsConfig.get('tipMap') || {};
         workspaceCfg.configFile = vsConfig.get('configFile') || '.awesomeness/config.js';
     } catch (e) {
         // last-resort fallback
         workspaceCfg.schemas = (vsConfig && vsConfig.schemas) || {};
-        workspaceCfg.components = (vsConfig && vsConfig.components) || {};
+        workspaceCfg.tipMap = (vsConfig && vsConfig.tipMap) || {};
         workspaceCfg.debug = !!(vsConfig && vsConfig.debug);
         workspaceCfg.configFile = '.awesomeness/config.js';
     }
@@ -174,63 +174,11 @@ async function loadProjectConfig({ outputChannel } = {}) {
             }
         }
 
-        // Handle componentLocations: if function returns paths outside workspace (due to wrong import.meta.url),
-        // replace with a safe fallback that resolves relative to the config file.
-        if (typeof fileCfg.componentLocations === 'function') {
-            try {
-                const testResult = fileCfg.componentLocations({ site: 'test-site' });
-                const ok = Array.isArray(testResult) && testResult.some(r => isUnderRoot(r));
-                if (!ok) throw new Error('componentLocations appears to return non-root URLs');
-
-                // wrap user-provided componentLocations to normalize and validate returned URLs
-                const origComponentLocations = fileCfg.componentLocations;
-                fileCfg.componentLocations = (awesomenessRequest) => {
-                    try {
-                        const res = origComponentLocations(awesomenessRequest);
-                        const arr = Array.isArray(res) ? res : [res];
-                        const normalized = arr.map(item => {
-                            if (!item) return null;
-                            if (item instanceof URL) return item;
-                            const s = String(item);
-                            try {
-                                // allow absolute URLs (including file:)
-                                return new URL(s);
-                            } catch (e) {
-                                // treat as path relative to the config directory
-                                try {
-                                    return new URL(pathToFileURL(path.resolve(configDir, s)).href);
-                                } catch (e2) {
-                                    return null;
-                                }
-                            }
-                        }).filter(Boolean).filter(u => isUnderRoot(u));
-
-                        log(outputChannel, `🔍 Normalized componentLocations -> ${normalized.map(u => u.href).join(', ')}`);
-                        return normalized;
-                    } catch (err) {
-                        log(outputChannel, `❌ componentLocations wrapper error: ${err.message}`);
-                        throw err;
-                    }
-                };
-                log(outputChannel, `🔍 Using user-provided componentLocations`);
-            } catch (e) {
-                log(outputChannel, `🔧 Overriding componentLocations with workspace-relative fallback`);
-                fileCfg.componentLocations = (awesomenessRequest) => {
-                    const siteSpecific = new URL(`../sites/${awesomenessRequest.site}/`, configBaseUrl);
-                    return [
-                        new URL('./components/', siteSpecific),
-                        new URL('../awesomeness-ui/components/', configBaseUrl)
-                    ];
-                };
-            }
-        }
-
-        // merge: shallow merge for top-level keys, with object merging for schemas/components
         const merged = Object.assign({}, workspaceCfg);
 
         for (const [k, v] of Object.entries(fileCfg)) {
            
-            if (k === 'schemas' || k === 'components') {
+            if (k === 'schemas' || k === 'tipMap') {
            
                 merged[k] = Object.assign({}, workspaceCfg[k] || {}, v || {});
            

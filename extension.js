@@ -50,6 +50,8 @@ function activate(context) {
                 // re-init logger with merged config (project config may override debug)
                 initLogger(config);
 
+               // log(outputChannel, `Config: ${Object.keys(config).join(', ')}`);
+
                 const line = document.lineAt(position.line).text;
 
                 const {
@@ -61,7 +63,8 @@ function activate(context) {
                 } = parseTriggerFromLine({ 
                     line,
                     position, 
-                    outputChannel 
+                    outputChannel,
+                    config
                 });
 
                 if (!targetName || !triggerKey || !triggerType) return;
@@ -69,8 +72,11 @@ function activate(context) {
                 let basePath = null;
                 let contentFunctionLocation = null;
 
-                // Determine site from current document path (used by componentLocations)
-                const site = getSiteFromPath(document.uri.fsPath, outputChannel);
+                const site = getSiteFromPath({
+                    filePath: document.uri.fsPath, 
+                    outputChannel,
+                    config                
+                });
 
                 if(site){
                     log(outputChannel, `✅ ${site}`);
@@ -78,43 +84,52 @@ function activate(context) {
                     log(outputChannel, `❌ No "site" detected`);
                 }
                 
-                // Build candidate base paths. If the project provides a `componentLocations` function,
-                // call it with the detected site to get site-specific URLs and prefer those first.
+
                 const configuredBase = config[triggerType]?.[triggerKey];
 
-                if (triggerType === 'components' && typeof config.componentLocations === 'function') {
+                if (typeof configuredBase === 'function') {
+
                     try {
-                        if (!site) {
-                            basePath = configuredBase;
-                        } else {
-                            const locs = config.componentLocations({ site });
+
+                        const locs = configuredBase({ site });
+
                         const locPaths = (Array.isArray(locs) ? locs : [locs]).map(l => {
+                            
                             if (!l) return null;
+                            
                             if (l instanceof URL) return fileURLToPath(l);
+                            
                             try {
+
                                 // allow string file: URLs
                                 if (String(l).startsWith('file:')) return fileURLToPath(new URL(String(l)));
+                            
                             } catch (e) {}
+
                             // treat as path relative to workspace root
                             return path.resolve(vscode.workspace.workspaceFolders[0].uri.fsPath, String(l));
+
                         }).filter(Boolean);
 
-                        // combine site-specific locations with configured base (configuredBase can be string or array)
-                        const configuredArr = Array.isArray(configuredBase) ? configuredBase : (configuredBase ? [configuredBase] : []);
-                        basePath = [...locPaths, ...configuredArr];
-                        }
+                        basePath = locPaths;
+                    
                     } catch (e) {
+
                         log(outputChannel, `❌ Error computing componentLocations: ${e.message}`);
+
                         basePath = configuredBase;
                     }
+
                 } else {
+
                     basePath = configuredBase;
+                    
                 }
 
                 if (!basePath) return;
             
 
-                // 🔽 Load the target module (component or schema)
+                // 🔽 Load the target module (tipMap or schema)
                 const data = await loadTargetModule({
                     targetName,
                     triggerKey,
