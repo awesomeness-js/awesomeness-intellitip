@@ -10,6 +10,8 @@ const parseTriggerFromLine = require("./utils/parseTriggerFromLine");
 const buildHoverContent = require("./utils/buildHoverContent");
 const { initLogger, log } = require("./utils/log");
 const replaceSchemasWithLinks = require("./utils/replaceSchemasWithLinks");
+const getSiteFromPath = require('./utils/getSiteFromPath');
+const { fileURLToPath } = require('url');
 
 // Output Channel
 const outputChannel = vscode.window.createOutputChannel("Awesomeness Intellitip");
@@ -20,6 +22,8 @@ let fileWatchers = {};
 
 function activate(context) {
     outputChannel.appendLine("✅ Awesomeness Intellitip Activated!");
+    // ensure output panel is visible so debug logs are seen while developing
+    try { outputChannel.show(true); } catch (e) { /* ignore in prod */ }
 
     context.subscriptions.push({
         dispose() {
@@ -34,7 +38,16 @@ function activate(context) {
 
             try {
                 
-                const config = vscode.workspace.getConfiguration("awesomeness");
+                const vsConfig = vscode.workspace.getConfiguration("awesomeness");
+
+                // initialize logger from workspace settings early so loader logs show up
+                initLogger(vsConfig);
+
+                // load merged config: workspace settings overridden by optional project config file
+                const loadProjectConfig = require('./utils/loadProjectConfig');
+                const config = await loadProjectConfig({ outputChannel });
+
+                // re-init logger with merged config (project config may override debug)
                 initLogger(config);
 
                 const line = document.lineAt(position.line).text;
@@ -56,7 +69,48 @@ function activate(context) {
                 let basePath = null;
                 let contentFunctionLocation = null;
 
-                basePath = config[triggerType]?.[triggerKey];
+                // Determine site from current document path (used by componentLocations)
+                const site = getSiteFromPath(document.uri.fsPath, outputChannel);
+
+                if(site){
+                    log(outputChannel, `✅ ${site}`);
+                } else {
+                    log(outputChannel, `❌ No "site" detected`);
+                }
+                
+                // Build candidate base paths. If the project provides a `componentLocations` function,
+                // call it with the detected site to get site-specific URLs and prefer those first.
+                const configuredBase = config[triggerType]?.[triggerKey];
+
+                if (triggerType === 'components' && typeof config.componentLocations === 'function') {
+                    try {
+                        if (!site) {
+                            basePath = configuredBase;
+                        } else {
+                            const locs = config.componentLocations({ site });
+                        const locPaths = (Array.isArray(locs) ? locs : [locs]).map(l => {
+                            if (!l) return null;
+                            if (l instanceof URL) return fileURLToPath(l);
+                            try {
+                                // allow string file: URLs
+                                if (String(l).startsWith('file:')) return fileURLToPath(new URL(String(l)));
+                            } catch (e) {}
+                            // treat as path relative to workspace root
+                            return path.resolve(vscode.workspace.workspaceFolders[0].uri.fsPath, String(l));
+                        }).filter(Boolean);
+
+                        // combine site-specific locations with configured base (configuredBase can be string or array)
+                        const configuredArr = Array.isArray(configuredBase) ? configuredBase : (configuredBase ? [configuredBase] : []);
+                        basePath = [...locPaths, ...configuredArr];
+                        }
+                    } catch (e) {
+                        log(outputChannel, `❌ Error computing componentLocations: ${e.message}`);
+                        basePath = configuredBase;
+                    }
+                } else {
+                    basePath = configuredBase;
+                }
+
                 if (!basePath) return;
             
 
@@ -77,10 +131,12 @@ function activate(context) {
                     return;
                 }
 
+                const resolvedBasePath = data?.basePath || basePath;
+
                 let hoverContent = await buildHoverContent({
                     targetName,
                     triggerKey,
-                    basePath,
+                    basePath: resolvedBasePath,
                     data,
                     triggerType,
                     outputChannel,

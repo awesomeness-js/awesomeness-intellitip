@@ -14,20 +14,64 @@ Provides way more information than the default hover, intellisense, or peek defi
 - 📢 **Debugging Output Channel**: Provides logs in a dedicated "Awesomeness Tooltip" output channel.
 
 ## 🛠 Configuration
+
+There are 2 places you can define a config
+1. Project config file: `.awesomeness/config.js` (preferred)
+2. VS Code settings: `settings.json` (fallback)
+
 This extension requires configuring path aliases to locate schema files. You can set these mappings in your VS Code settings (`settings.json`):
+
+### Example .vscode/settings.json
+
+```js
+export default {
+    debug: true,
+    schemas: {
+      "@schemas": "schemas"
+    },
+    components: {
+        "ui": [ // can be array or string
+            "awesomeness-ui/components", 
+            "awesomeness-ui/components2"
+        ],
+        "app": "api/functions" // can be simple string
+    },
+    componentLocations: (site) => {
+        // build a site-specific base URL relative to the config file
+        const siteURL = new URL(`../sites/${site}/`, import.meta.url);
+        return [
+        new URL('./components/', siteURL), // site-first
+        new URL('../awesomeness-ui/components/', import.meta.url) // fallback
+        ];
+    }
+};
+```
+
+**Project Config: componentLocations**
+
+- **Signature:** `componentLocations(site)` — the loader will call this with the detected `site` string (or `null` when no site can be determined).
+- **Return value:** an Array of `URL` objects (preferred). Returning `URL` objects avoids ambiguity and path resolution issues; strings are tolerated but less robust.
+- **Behavior:** the loader prefers the returned locations (first match wins). Items outside the workspace are filtered out and logged. If `site` is `null`, site-specific locations should be skipped.
+
+
+
+This contract keeps `componentLocations` simple and explicit: implementors construct proper `URL` values and the extension converts and validates them.
+
+
+### Example .vscode/settings.json
 
 ```json
 {
   "awesomeness": {
-        "schemas": { // will look for a file in that directory with the target name
-            "@schemas": "schemas",
-        },
-        "components": { 
-            "@ui": "awesomeness-ui/components",
-            "ui": "awesomeness-ui/components",
-            "app": "api/functions",
-        },
+    "schemas": { // will look for a file in that directory with the target name
+      "@schemas": "schemas"
+    },
+    "components": {
+      // can be a single string or an array of paths (first match wins)
+      "ui": ["awesomeness-ui/components", "awesomeness-ui/components2"],
+      "app": "api/functions"
     }
+  }
 }
 ```
 
@@ -36,24 +80,13 @@ This extension requires configuring path aliases to locate schema files. You can
 If you're using `awesomeness-ui` components or `awesomeness-api/routes`, each component or route should ideally live in its own folder with either a `readme.md` or `_info.js` file to describe it.
 
 
-#### 🔧 Example Config: `.vscode/settings.json`
+**Project config loading (priority)**
 
-```json
-{
-  "awesomeness": {
-    "debug": true,
-    "schemas": {
-      "@schemas": "schemas"
-    },
-    "components": {
-      "ui": "awesomeness-ui/components",
-      "app": "api/functions"
-    }
-  }
-}
-```
+The extension prefers a project config file at `.awesomeness/config.js` as the primary configuration source. If that file is absent, workspace `settings.json` (`awesomeness` section) is used as an optional fallback. When both exist, project config values override workspace settings. The check below:
 
 ---
+
+
 
 ### 📚 File Resolution Priority
 

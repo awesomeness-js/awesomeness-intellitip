@@ -1,10 +1,17 @@
 {
-	"editor.tabSize": 4,
-	"editor.detectIndentation": false,
-	"editor.codeActionsOnSave": {
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false,
+    "editor.codeActionsOnSave": {
         "source.fixAll": "explicit",
         "source.fixAll.eslint": "explicit"
     },
-	"eslint.workingDirectories": [{ "mode": "auto" }],
-	"eslint.ignorePatterns": ["node_modules", "dist", "build"]
+    "eslint.workingDirectories": [
+        {
+            "mode": "auto"
+        }
+    ],
+    "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+    "code-runner.runInTerminal": true,
+    "code-runner.fileDirectoryAsCwd": true,
+    "terminal.integrated.defaultProfile.windows": "Git Bash",
 }

@@ -75,9 +75,6 @@ export default [
 				}
 			],
 
-			// 3) Optional: require trailing commas in multiline objects
-			"comma-dangle": [ "error", "never" ],
-
 			indent: [ "error", "tab", { "SwitchCase": 1 } ],
 			semi: [ "error", "always" ],
 			"arrow-parens": [ "error", "always" ],

@@ -23,7 +23,7 @@ function parseTriggerFromLine({ line, position, outputChannel }) {
 
                 if(parts.length > 0) {
 
-                    log(outputChannel, `✅ Match found in ${triggerKey} part: ${parts.join(', ')}`);
+                    log(outputChannel, `✅ Match found in [${triggerKey}] part: ${parts.join(', ')}`);
 
                     return parseResult({
                         sectionKey, 

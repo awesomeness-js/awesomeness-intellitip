@@ -29,30 +29,45 @@ module.exports = async function loadTargetModule({
     const parts = Array.isArray(targetName) ? [...targetName] : [targetName];
     const name = parts.join(".");
     const last = parts[parts.length - 1];
-    const dir = path.join(root, basePath, ...parts.slice(0, -1));
 
-    const tryPaths = [];
+    const basePaths = Array.isArray(basePath) ? basePath : [basePath];
 
-    if (triggerType === "components") {
-        tryPaths.push(
-            path.join(dir, `${last}.md`),
-            path.join(dir, last, `readme.md`),
-            path.join(dir, last, `_info.js`)
-        );
-    }
+    // try each configured basePath until a matching file is found
+    for (const currentBasePath of basePaths) {
+        log(outputChannel, `🔍 Using base path candidate: ${currentBasePath}`);
 
-    if (triggerType === "schemas") {
-        tryPaths.push(
-            path.join(root, basePath, `${name}.js`)
-        );
-    }
+        // If the configured base path is absolute, use it directly; otherwise resolve against workspace root
+        const dir = path.isAbsolute(String(currentBasePath))
+            ? path.join(String(currentBasePath), ...parts.slice(0, -1))
+            : path.join(root, String(currentBasePath), ...parts.slice(0, -1));
 
-    for (const filePath of tryPaths) {
+        const tryPaths = [];
+
+        if (triggerType === "components") {
+            tryPaths.push(
+                path.join(dir, `${last}.md`),
+                path.join(dir, last, `readme.md`),
+                path.join(dir, last, `README.md`),
+                path.join(dir, last, `_info.js`)
+            );
+        }
+
+        if (triggerType === "schemas") {
+            if (path.isAbsolute(String(currentBasePath))) {
+                tryPaths.push(path.join(String(currentBasePath), `${name}.js`));
+            } else {
+                tryPaths.push(path.join(root, String(currentBasePath), `${name}.js`));
+            }
+        }
+
+        for (const filePath of tryPaths) {
         const cacheKey = `${triggerType}::${filePath}`;
         if (cache[cacheKey]) {
             log(outputChannel, `🔍 Using cached ${filePath}`);
             return cache[cacheKey];
         }
+
+        log(outputChannel, `🔍 Trying to load file: ${filePath}`);
 
         if (!fs.existsSync(filePath)) continue;
 
@@ -75,6 +90,9 @@ module.exports = async function loadTargetModule({
                     md: content
                 };
 
+                // record which basePath produced this result
+                data.basePath = currentBasePath;
+
                 watchSchemaFile({ filePath, fileWatchers, cache, cacheKey });
                 cache[cacheKey] = data;
                 log(outputChannel, `✅ Loaded markdown: ${filePath}`);
@@ -91,6 +109,9 @@ module.exports = async function loadTargetModule({
                         fileUrl: fileUri.toString()
                     });
 
+                    // record which basePath produced this result
+                    data.basePath = currentBasePath;
+
                     watchSchemaFile({ filePath, fileWatchers, cache, cacheKey });
                     cache[cacheKey] = data;
                     log(outputChannel, `✅ Loaded JS (ESM): ${filePath}`);
@@ -104,6 +125,9 @@ module.exports = async function loadTargetModule({
                         fileUrl: fileUri.toString()
                     });
 
+                    // record which basePath produced this result
+                    mod.basePath = currentBasePath;
+
                     watchSchemaFile({ filePath, fileWatchers, cache, cacheKey });
                     cache[cacheKey] = mod;
                     log(outputChannel, `✅ Loaded JS (CJS): ${filePath}`);
@@ -113,6 +137,7 @@ module.exports = async function loadTargetModule({
 
         } catch (error) {
             log(outputChannel, `❌ Error loading file: ${filePath} - ${error.message}`);
+        }
         }
     }
 

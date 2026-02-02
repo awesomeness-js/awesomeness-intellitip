@@ -1,60 +1,59 @@
 {
-	"name": "awesomeness-intellitip",
-	"displayName": "Awesomeness Intellitip",
-	"description": "Sweet ass tool tips based on your docs",
-	"version": "1.0.6",
-	"type": "commonjs",
-	"main": "./extension.js",
-	"icon": "icon.png",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/awesomeness-js/awesomeness-intellitip.git"
-	},
-	"publisher": "awesomeness",
-	"engines": {
-		"vscode": "^1.97.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"activationEvents": [
-		"onLanguage:javascript"
-	],
-	"contributes": {
+    "name": "awesomeness-intellitip",
+    "displayName": "Awesomeness Intellitip",
+    "description": "Sweet ass tool tips based on your docs",
+    "version": "1.0.7",
+    "type": "commonjs",
+    "main": "./extension.js",
+    "icon": "icon.png",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/awesomeness-js/awesomeness-intellitip.git"
+    },
+    "publisher": "awesomeness",
+    "engines": {
+        "vscode": "^1.97.0"
+    },
+    "categories": [],
+    "activationEvents": [
+        "*",
+        "onLanguage:javascript"
+    ],
+    "contributes": {
         "configuration": {
             "title": "Awesomeness Intellitip",
             "properties": {
-            "awesomeness": {
-                "type": "object",
-                "default": {},
-                "description": "Root config for Awesomeness Intellitip",
-                "properties": {
-                "debug": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Enable debug logging"
-                },
-                "schemas": {
+                "awesomeness": {
                     "type": "object",
                     "default": {},
-                    "description": "Schema mappings"
-                },
-                "components": {
-                    "type": "object",
-                    "default": {},
-                    "description": "Component mappings"
+                    "description": "Root config for Awesomeness Intellitip",
+                    "properties": {
+                        "debug": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "Enable debug logging"
+                        },
+                        "schemas": {
+                            "type": "object",
+                            "default": {},
+                            "description": "Schema mappings"
+                        },
+                        "components": {
+                            "type": "object",
+                            "default": {},
+                            "description": "Component mappings"
+                        }
+                    }
                 }
-                }
-            }
             }
         }
     },
-	"devDependencies": {
-		"@types/vscode": "^1.97.0",
-		"@types/mocha": "^10.0.10",
-		"@types/node": "20.x",
-		"eslint": "^9.19.0",
-		"@vscode/test-cli": "^0.0.10",
-		"@vscode/test-electron": "^2.4.1"
-	}
+    "devDependencies": {
+        "@types/vscode": "^1.97.0",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "20.x",
+        "eslint": "^9.19.0",
+        "@vscode/test-cli": "^0.0.10",
+        "@vscode/test-electron": "^2.4.1"
+    }
 }
