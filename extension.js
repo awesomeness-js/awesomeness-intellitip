@@ -21,9 +21,11 @@ let schemaCache = {};
 let fileWatchers = {};
 
 function activate(context) {
+    
     outputChannel.appendLine("✅ Awesomeness Intellitip Activated!");
+    
     // ensure output panel is visible so debug logs are seen while developing
-    try { outputChannel.show(true); } catch (e) { /* ignore in prod */ }
+    // try { outputChannel.show(true); } catch (e) { /* ignore in prod */ }
 
     context.subscriptions.push({
         dispose() {
