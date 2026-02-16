@@ -12,7 +12,7 @@ If you want to provide 100% custom tooltips based on custom MD, or Awesomeness S
 
 You can do something like this:
 
-Anytime the cursor hovers over a line that has `ui.anthing()` you will get a custom tool tip! (**Yeah it can be 100% MD**)
+Anytime the cursor hovers over a line that has `ui.anything()` you will get a custom tool tip! (**Yeah it can be 100% MD**)
 
 
 
