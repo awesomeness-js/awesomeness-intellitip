@@ -85,6 +85,40 @@ the `site` parameter will be `mysite`.
 
 This way you can have site-specific components loaded first, and then fallback to shared components.
 
+### Node Modules Metadata Discovery
+
+The extension can now load metadata from installed libraries that expose a `.awesomeness` folder.
+
+Default behavior:
+- Discovery mode: `dependencies-only`
+- Precedence: `local-first`
+- Trigger syntax: unchanged
+
+When a base path is configured as a relative path (for example `schemas` or `components`), lookup candidates are expanded in this order:
+1. `<workspace>/<basePath>`
+2. `<workspace>/.awesomeness/<basePath>`
+3. `<workspace>/node_modules/<package>/.awesomeness/<basePath>` for direct dependencies
+
+Scoped packages are supported:
+- `<workspace>/node_modules/@scope/<package>/.awesomeness/<basePath>`
+
+If the same target exists in multiple places, the first match wins based on `resolutionOrder`.
+
+### Settings
+
+```json
+{
+  "awesomeness.enableNodeModulesAwesomeness": true,
+  "awesomeness.nodeModulesDiscovery": "dependencies-only",
+  "awesomeness.resolutionOrder": "local-first"
+}
+```
+
+`nodeModulesDiscovery` values:
+- `off`: disable node_modules discovery
+- `dependencies-only`: check only direct dependencies from `package.json` (recommended)
+- `deep-scan`: recursively scan `node_modules` for `.awesomeness` directories (slower)
+
 
 ## 🎯 Usage
 

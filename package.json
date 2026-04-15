@@ -2,7 +2,7 @@
     "name": "awesomeness-intellitip",
     "displayName": "Awesomeness Intellitip",
     "description": "Sweet ass tool tips based on your docs",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "type": "commonjs",
     "main": "./extension.js",
     "icon": "icon.png",
@@ -42,6 +42,30 @@
                             "type": "object",
                             "default": {},
                             "description": "Component mappings"
+                        },
+                        "enableNodeModulesAwesomeness": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "When enabled, discovers .awesomeness folders from installed dependencies in node_modules"
+                        },
+                        "nodeModulesDiscovery": {
+                            "type": "string",
+                            "default": "dependencies-only",
+                            "enum": [
+                                "off",
+                                "dependencies-only",
+                                "deep-scan"
+                            ],
+                            "description": "Controls how node_modules package .awesomeness folders are discovered"
+                        },
+                        "resolutionOrder": {
+                            "type": "string",
+                            "default": "local-first",
+                            "enum": [
+                                "local-first",
+                                "package-first"
+                            ],
+                            "description": "Determines precedence when both local and package metadata provide the same target"
                         }
                     }
                 }
