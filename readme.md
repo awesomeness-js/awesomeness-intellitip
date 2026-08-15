@@ -81,7 +81,7 @@ export default {
 Trigger keys can now match in 4 ways:
 - Prefix lookup for dotted access (example: `ui.card.grid()`)
 - Command style with a space (example: `@schemas user`)
-- Function-call first argument lookup (example: `app.create('user', data)`)
+- Function-call first argument lookup (examples: `app.create('user', data)`, `app.update(backgroundJob)`)
 - Regex literal keys for custom patterns
 
 Function-call lookup uses the configured key as the function name, so this works:

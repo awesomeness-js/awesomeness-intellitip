@@ -68,7 +68,7 @@ function parseTriggerFromLine({ line, position, outputChannel, config }) {
 
                 }
 
-                const functionCallTarget = extractQuotedFirstArg({
+                const functionCallTarget = extractFunctionFirstArg({
                     text: line,
                     triggerKey,
                     position,
@@ -185,19 +185,20 @@ function normalizeFunctionTrigger(triggerKey) {
         .trim();
 }
 
-function extractQuotedFirstArg({ text, triggerKey, position, outputChannel }) {
+function extractFunctionFirstArg({ text, triggerKey, position, outputChannel }) {
     const normalizedTrigger = normalizeFunctionTrigger(triggerKey);
     if (!normalizedTrigger) return null;
 
     const escaped = normalizedTrigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pattern = escaped + "\\s*\\(\\s*(['\"`])([^'\"`]+)\\1";
+    const pattern = escaped + "\\s*\\(\\s*(?:(['\"`])([^'\"`]+)\\1|([A-Za-z_$][\\w$]*))";
     const regex = new RegExp(pattern, 'g');
     const cursorChar = position.character;
 
     let match;
     while ((match = regex.exec(text)) !== null) {
         const fullMatch = match[0] || '';
-        const matchedTarget = match[2];
+        const matchedTarget = match[2] || match[3];
+        if (!matchedTarget) continue;
         const fullMatchIndex = match.index;
         const targetOffset = fullMatch.indexOf(matchedTarget);
         const targetStart = targetOffset >= 0 ? fullMatchIndex + targetOffset : fullMatchIndex;
