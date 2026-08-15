@@ -49,7 +49,8 @@ export default {
     siteDir__URL: new URL('../sites/', import.meta.url),
     
     schemas: {
-      "@schemas": "schemas"
+      "@schemas": "schemas",
+      "app.create": "schemas"
     },
 
 
@@ -73,6 +74,33 @@ export default {
     },
 
 };
+```
+
+### Trigger Patterns
+
+Trigger keys can now match in 4 ways:
+- Prefix lookup for dotted access (example: `ui.card.grid()`)
+- Command style with a space (example: `@schemas user`)
+- Function-call first argument lookup (example: `app.create('user', data)`)
+- Regex literal keys for custom patterns
+
+Function-call lookup uses the configured key as the function name, so this works:
+
+```js
+schemas: {
+  "app.create": "schemas"
+}
+```
+
+Regex keys are supported with a JavaScript regex-literal string format: `/pattern/flags`.
+
+Use capture group 1, or a named group called `target`, as the matched schema name.
+
+```js
+schemas: {
+  "/app\\.create\\(\\s*['\"`]([^'\"`]+)['\"`]/": "schemas",
+  "/app\\.create\\(\\s*['\"`](?<target>[^'\"`]+)['\"`]/": "schemas"
+}
 ```
 
 **How dynamic tipMap function works**

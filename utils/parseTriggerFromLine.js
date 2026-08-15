@@ -11,6 +11,41 @@ function parseTriggerFromLine({ line, position, outputChannel, config }) {
     for (const [sectionKey, triggerMap] of Object.entries(sections)) {
 
         for (const triggerKey of Object.keys(triggerMap)) {
+
+            const regexLiteral = parseRegexLiteral(triggerKey);
+
+            if (regexLiteral) {
+                let regexMatch;
+                while ((regexMatch = regexLiteral.exec(line)) !== null) {
+                    const fullMatch = regexMatch[0] || "";
+                    const fullMatchIndex = regexMatch.index;
+
+                    const namedTarget = regexMatch.groups?.target;
+                    const capturedTarget = namedTarget || regexMatch[1] || fullMatch;
+
+                    if (!capturedTarget) continue;
+
+                    const cursorChar = position.character;
+                    const targetOffset = fullMatch.indexOf(capturedTarget);
+                    const targetStart = targetOffset >= 0 ? fullMatchIndex + targetOffset : fullMatchIndex;
+                    const targetEnd = targetStart + capturedTarget.length;
+
+                    log(outputChannel, `✅ Regex trigger matched [${triggerKey}] target="${capturedTarget}"`);
+
+                    if (cursorChar >= targetStart && cursorChar <= targetEnd) {
+                        log(outputChannel, `🎯 Cursor is over regex target: "${capturedTarget}"`);
+
+                        return parseResult({
+                            sectionKey,
+                            triggerKey,
+                            targetName: capturedTarget,
+                            postfixCommand: null
+                        });
+                    }
+                }
+
+                continue;
+            }
             
             const hasNoAt = !triggerKey.includes('@');
 
@@ -31,6 +66,22 @@ function parseTriggerFromLine({ line, position, outputChannel, config }) {
                     });
 
 
+                }
+
+                const functionCallTarget = extractQuotedFirstArg({
+                    text: line,
+                    triggerKey,
+                    position,
+                    outputChannel
+                });
+
+                if (functionCallTarget) {
+                    return parseResult({
+                        sectionKey,
+                        triggerKey,
+                        targetName: functionCallTarget,
+                        postfixCommand: null
+                    });
                 }
 
             }
@@ -107,6 +158,60 @@ function parseTriggerFromLine({ line, position, outputChannel, config }) {
         triggerType: null,
         customTypeKey: null
     };
+}
+
+function parseRegexLiteral(triggerKey) {
+    if (typeof triggerKey !== 'string') return null;
+
+    const literal = triggerKey.match(/^\/(.+)\/([a-z]*)$/i);
+    if (!literal) return null;
+
+    try {
+        const source = literal[1];
+        const flagsRaw = literal[2] || '';
+        const flags = flagsRaw.includes('g') ? flagsRaw : `${flagsRaw}g`;
+        return new RegExp(source, flags);
+    } catch (e) {
+        return null;
+    }
+}
+
+function normalizeFunctionTrigger(triggerKey) {
+    if (typeof triggerKey !== 'string') return '';
+
+    return triggerKey
+        .replace(/\s*\(\s*$/, '')
+        .replace(/\s*\(\s*['"`]\s*$/, '')
+        .trim();
+}
+
+function extractQuotedFirstArg({ text, triggerKey, position, outputChannel }) {
+    const normalizedTrigger = normalizeFunctionTrigger(triggerKey);
+    if (!normalizedTrigger) return null;
+
+    const escaped = normalizedTrigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = escaped + "\\s*\\(\\s*(['\"`])([^'\"`]+)\\1";
+    const regex = new RegExp(pattern, 'g');
+    const cursorChar = position.character;
+
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+        const fullMatch = match[0] || '';
+        const matchedTarget = match[2];
+        const fullMatchIndex = match.index;
+        const targetOffset = fullMatch.indexOf(matchedTarget);
+        const targetStart = targetOffset >= 0 ? fullMatchIndex + targetOffset : fullMatchIndex;
+        const targetEnd = targetStart + matchedTarget.length;
+
+        log(outputChannel, `✅ Function call trigger matched [${triggerKey}] target="${matchedTarget}"`);
+
+        if (cursorChar >= targetStart && cursorChar <= targetEnd) {
+            log(outputChannel, `🎯 Cursor is over function call target: "${matchedTarget}"`);
+            return matchedTarget;
+        }
+    }
+
+    return null;
 }
 
 function parseResult({
