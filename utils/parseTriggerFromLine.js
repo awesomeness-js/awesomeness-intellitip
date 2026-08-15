@@ -50,6 +50,22 @@ function parseTriggerFromLine({ line, position, outputChannel, config }) {
             const hasNoAt = !triggerKey.includes('@');
 
             if (hasNoAt) {
+
+                const assignedFunctionTarget = extractAwaitedFunctionAssignment({
+                    text: line,
+                    triggerKey,
+                    position,
+                    outputChannel
+                });
+
+                if (assignedFunctionTarget) {
+                    return parseResult({
+                        sectionKey,
+                        triggerKey,
+                        targetName: assignedFunctionTarget,
+                        postfixCommand: null
+                    });
+                }
             
                 // does line contain a prefix?
                 const parts = extractPathByPrefix(line, triggerKey);
@@ -209,6 +225,33 @@ function extractFunctionFirstArg({ text, triggerKey, position, outputChannel }) 
         if (cursorChar >= targetStart && cursorChar <= targetEnd) {
             log(outputChannel, `🎯 Cursor is over function call target: "${matchedTarget}"`);
             return matchedTarget;
+        }
+    }
+
+    return null;
+}
+
+function extractAwaitedFunctionAssignment({ text, triggerKey, position, outputChannel }) {
+    const normalizedTrigger = normalizeFunctionTrigger(triggerKey);
+    if (!normalizedTrigger) return null;
+
+    const escaped = normalizedTrigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = `\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*await\\s+${escaped}\\s*\\(`;
+    const regex = new RegExp(pattern, 'g');
+    const cursorChar = position.character;
+
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+        const targetName = match[1];
+        const targetOffset = match[0].indexOf(targetName);
+        const targetStart = match.index + targetOffset;
+        const targetEnd = targetStart + targetName.length;
+
+        log(outputChannel, `✅ Awaited function assignment matched [${triggerKey}] target="${targetName}"`);
+
+        if (cursorChar >= targetStart && cursorChar <= targetEnd) {
+            log(outputChannel, `🎯 Cursor is over assigned function target: "${targetName}"`);
+            return targetName;
         }
     }
 

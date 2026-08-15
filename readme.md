@@ -82,15 +82,19 @@ Trigger keys can now match in 4 ways:
 - Prefix lookup for dotted access (example: `ui.card.grid()`)
 - Command style with a space (example: `@schemas user`)
 - Function-call first argument lookup (examples: `app.create('user', data)`, `app.update(backgroundJob)`)
+- Awaited function assignment lookup (example: `const user = await app.get(id)`)
 - Regex literal keys for custom patterns
 
 Function-call lookup uses the configured key as the function name, so this works:
 
 ```js
 schemas: {
-  "app.create": "schemas"
+  "app.create": "schemas",
+  "app.get": "schemas"
 }
 ```
+
+With `"app.get": "schemas"`, hovering `user` in `const user = await app.get(id)` looks up the `user` schema. The argument (`id`) is not used for that assignment lookup.
 
 Regex keys are supported with a JavaScript regex-literal string format: `/pattern/flags`.
 
