@@ -90,13 +90,21 @@ function prettyConfigErrorMessage(err) {
 }
 
 async function activate(context) {
-    // ensure output panel is visible so debug logs are seen while developing
-    try { outputChannel.show(true); } catch (e) { /* ignore in prod */ }
 
     // log config
     const vsConfig = vscode.workspace.getConfiguration("awesomeness");
+
     initLogger(vsConfig);
+
     outputChannel.appendLine(`VS Config: debug=${vsConfig.get('debug')}, configFile=${vsConfig.get('configFile')}`);
+
+    if(vsConfig.get('debug') === true){
+        
+        // ensure output panel is visible so debug logs are seen while developing
+        try { outputChannel.show(true); } catch (e) { /* ignore in prod */ }
+
+        outputChannel.appendLine(`Debug mode is ON. Logs will be printed to the "Awesomeness Intellitip" output channel.`);
+    }
 
     // Load project config ONCE at activation
     await tryLoadProjectConfigOnce(outputChannel);
