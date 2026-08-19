@@ -4,7 +4,7 @@
 
 **Why was this not created before?** ... whatever I did it.
 
-Tooltips should show **meaningful** documentation for whatever you are working with not just a type signature. This extension is a companion to [Awesomeness JS](https://awesomeness.js), but it can be used in any project.
+Tooltips should show **meaningful** documentation for whatever you are working with not just a type signature. This extension is a companion to [Awesomeness JS](https://awesomenessjs.com), but it can be used in any project.
 
 > ...
 > **(Quick plug for Awesomeness JS:)** it's a true **full stack** JavaScript framework for building modern web apps ready to be deployed as PWA's. Front-End, Back-End, API, API Docs, SDK, MCP Server, Agents... It's a no BS vanilla JS library with no frameworks, build steps, or transpilation. The key to success is organization and schemas every dev shares. **Everything boils down to schemas**
