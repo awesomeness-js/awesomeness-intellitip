@@ -2,7 +2,7 @@
     "name": "awesomeness-intellitip",
     "displayName": "Awesomeness Intellitip",
     "description": "Sweet ass tool tips based on your docs",
-    "version": "1.1.6",
+    "version": "1.1.7",
     "type": "commonjs",
     "main": "./extension.js",
     "icon": "icon.png",
@@ -32,6 +32,11 @@
                             "type": "boolean",
                             "default": false,
                             "description": "Enable debug logging"
+                        },
+                        "makeSchemaWordsSpecial": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Enable hover lookup for identifiers that match configured schema or component files"
                         },
                         "schemas": {
                             "type": "object",

@@ -6,10 +6,24 @@ module.exports = ({
     data,
     triggerType,
     outputChannel,
-    postfixCommand
+    postfixCommand,
+    propertyName
 }) => {
     
     let hoverContent = `### [${targetName}](${data.fileUrl})\n`;
+
+    if (propertyName) {
+        const property = propertyName
+            .split('.')
+            .reduce((current, key) => current?.properties?.[key], {
+                properties: data.properties
+            });
+
+        if (property) {
+            hoverContent += `\n\`\`\`js\n${propertyName}: ${customStringify(property)}\n\`\`\`\n`;
+            return hoverContent;
+        }
+    }
 
     if (data.description) {
         hoverContent += `\n${data.description}\n\n`;

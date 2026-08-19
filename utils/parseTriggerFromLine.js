@@ -67,8 +67,8 @@ function parseTriggerFromLine({ line, position, outputChannel, config }) {
                     });
                 }
             
-                // does line contain a prefix?
-                const parts = extractPathByPrefix(line, triggerKey);
+                // does line contain a prefix, and is the cursor over it?
+                const parts = extractPathByPrefix(line, triggerKey, position);
 
                 if(parts.length > 0) {
 
@@ -167,13 +167,71 @@ function parseTriggerFromLine({ line, position, outputChannel, config }) {
 
     }
 
+    const genericTarget = extractGenericTarget({
+        line,
+        position,
+        outputChannel
+    });
+
+    if (genericTarget) {
+        return {
+            targetName: genericTarget.targetName,
+            propertyName: genericTarget.propertyName,
+            postfixCommand: null,
+            triggerKey: null,
+            triggerType: null,
+            customTypeKey: null,
+            isGeneric: true
+        };
+    }
+
     return {
         targetName: null,
         postfixCommand: null,
         triggerKey: null,
         triggerType: null,
-        customTypeKey: null
+        customTypeKey: null,
+        propertyName: null,
+        isGeneric: false
     };
+}
+
+function extractGenericTarget({ line, position, outputChannel }) {
+    const identifierRegex = /(?<![\w$])([A-Za-z_$][\w$]*(?:(?:\?\.|\.)(?:[A-Za-z_$][\w$]*))*)/g;
+
+    let match;
+    while ((match = identifierRegex.exec(line)) !== null) {
+        const segments = [];
+        const segmentRegex = /[A-Za-z_$][\w$]*/g;
+        let segmentMatch;
+
+        while ((segmentMatch = segmentRegex.exec(match[0])) !== null) {
+            segments.push({
+                name: segmentMatch[0],
+                start: match.index + segmentMatch.index,
+                end: match.index + segmentMatch.index + segmentMatch[0].length
+            });
+        }
+
+        const hoveredSegmentIndex = segments.findIndex(({ start, end }) =>
+            position.character >= start && position.character <= end
+        );
+
+        if (hoveredSegmentIndex < 0) continue;
+
+        const targetName = segments[0].name;
+        const propertyName = hoveredSegmentIndex > 0
+            ? segments.slice(1, hoveredSegmentIndex + 1).map(({ name }) => name).join('.')
+            : null;
+
+        log(outputChannel, `✅ Generic file target candidate: "${targetName}"${propertyName ? ` property="${propertyName}"` : ''}`);
+        return {
+            targetName,
+            propertyName
+        };
+    }
+
+    return null;
 }
 
 function parseRegexLiteral(triggerKey) {
@@ -270,21 +328,34 @@ function parseResult({
         postfixCommand,
         triggerKey,
         triggerType: sectionKey,
-        customTypeKey: null
+        customTypeKey: null,
+        propertyName: null,
+        isGeneric: false
     };
 
 }
 
-const extractPathByPrefix = (text, triggerKey) => {
+const extractPathByPrefix = (text, triggerKey, position) => {
     const escaped = triggerKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape trigger for regex
-    const regex = new RegExp(`${escaped}\\.([\\w\\d.]+)`);
-    const match = text.match(regex);
-    if (!match) return [];
+    const regex = new RegExp(`${escaped}\\.([\\w\\d.]+)`, 'g');
+    const cursorChar = position?.character;
 
-    return match[1]
-        .replace(/[();]+$/g, '') // strip trailing semicolons or parens
-        .split('.')
-        .filter(Boolean);
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+        const fullMatch = match[0];
+        const targetStart = match.index;
+        const targetEnd = targetStart + fullMatch.length;
+
+        // only match the trigger's own dotted path (e.g. "app.create"), not the rest of the line
+        if (cursorChar != null && (cursorChar < targetStart || cursorChar > targetEnd)) continue;
+
+        return match[1]
+            .replace(/[();]+$/g, '') // strip trailing semicolons or parens
+            .split('.')
+            .filter(Boolean);
+    }
+
+    return [];
 };
 
 module.exports = parseTriggerFromLine;

@@ -55,6 +55,53 @@ function expandBasePathCandidates({ configuredBase, config }) {
     return out;
 }
 
+function resolveConfiguredBasePath({ configuredBase, site, workspaceRoot, outputChannel }) {
+    if (typeof configuredBase !== 'function') return configuredBase;
+
+    try {
+        const locations = configuredBase({ site });
+        return (Array.isArray(locations) ? locations : [locations])
+            .map((location) => {
+                if (!location) return null;
+                if (location instanceof URL) return fileURLToPath(location);
+
+                try {
+                    if (String(location).startsWith('file:')) {
+                        return fileURLToPath(new URL(String(location)));
+                    }
+                } catch (error) {
+                    log(outputChannel, `❌ Error resolving configured base path: ${error.message}`);
+                }
+
+                return path.resolve(workspaceRoot, String(location));
+            })
+            .filter(Boolean);
+    } catch (error) {
+        log(outputChannel, `❌ Error computing configured base path: ${error.message}`);
+        return [];
+    }
+}
+
+function getGenericCandidates({ config, site, workspaceRoot, outputChannel }) {
+    const candidates = [];
+
+    for (const triggerType of ['tipMap', 'schemas']) {
+        const triggerMap = config[triggerType] || {};
+
+        for (const [triggerKey, configuredBase] of Object.entries(triggerMap)) {
+            const basePath = resolveConfiguredBasePath({ configuredBase, site, workspaceRoot, outputChannel });
+
+            candidates.push({
+                triggerKey,
+                triggerType,
+                basePath
+            });
+        }
+    }
+
+    return candidates;
+}
+
 
 // Store config and error state globally
 let globalProjectConfig = null;
@@ -93,6 +140,7 @@ async function activate(context) {
 
     // log config
     const vsConfig = vscode.workspace.getConfiguration("awesomeness");
+    const makeSchemaWordsSpecial = vsConfig.get('makeSchemaWordsSpecial', true);
 
     initLogger(vsConfig);
 
@@ -146,7 +194,9 @@ async function activate(context) {
                     postfixCommand,
                     triggerKey,
                     triggerType,
-                    customTypeKey
+                    customTypeKey,
+                    isGeneric,
+                    propertyName
                 } = parseTriggerFromLine({ 
                     line,
                     position, 
@@ -154,7 +204,9 @@ async function activate(context) {
                     config
                 });
 
-                if (!targetName || !triggerKey || !triggerType) return;
+                const schemaWordsAreSpecial = config.makeSchemaWordsSpecial ?? makeSchemaWordsSpecial;
+
+                if (!targetName || (isGeneric && !schemaWordsAreSpecial)) return;
 
                 let basePath = null;
                 let contentFunctionLocation = null;
@@ -171,48 +223,53 @@ async function activate(context) {
                     log(outputChannel, `❌ No "site" detected`);
                 }
 
-                const configuredBase = config[triggerType]?.[triggerKey];
-
-                if (typeof configuredBase === 'function') {
-                    try {
-                        const locs = configuredBase({ site });
-                        const locPaths = (Array.isArray(locs) ? locs : [locs]).map(l => {
-                            if (!l) return null;
-                            if (l instanceof URL) return fileURLToPath(l);
-                            try {
-                                if (String(l).startsWith('file:')) return fileURLToPath(new URL(String(l)));
-                            } catch (e) {}
-                            return path.resolve(vscode.workspace.workspaceFolders[0].uri.fsPath, String(l));
-                        }).filter(Boolean);
-                        basePath = locPaths;
-                    } catch (e) {
-                        log(outputChannel, `❌ Error computing componentLocations: ${e.message}`);
-                        basePath = configuredBase;
-                    }
-                } else {
-                    basePath = configuredBase;
-                }
-
                 const workspaceFolders = vscode.workspace.workspaceFolders;
                 if (!workspaceFolders?.length) return;
 
-                basePath = expandBasePathCandidates({ configuredBase: basePath, config });
+                const candidates = isGeneric
+                    ? getGenericCandidates({ config, site, workspaceRoot: workspaceFolders[0].uri.fsPath, outputChannel })
+                    : [{
+                        triggerKey,
+                        triggerType,
+                        basePath: resolveConfiguredBasePath({
+                            configuredBase: config[triggerType]?.[triggerKey],
+                            site,
+                            workspaceRoot: workspaceFolders[0].uri.fsPath,
+                            outputChannel
+                        })
+                    }];
 
-                if (!basePath) return;
+                let data = null;
+                let resolvedTriggerKey = triggerKey;
+                let resolvedTriggerType = triggerType;
+                for (const candidate of candidates) {
+                    const candidateBasePath = expandBasePathCandidates({
+                        configuredBase: candidate.basePath,
+                        config
+                    });
 
-                // 🔽 Load the target module (tipMap or schema)
-                const data = await loadTargetModule({
-                    targetName,
-                    triggerKey,
-                    basePath,
-                    triggerType,
-                    fileWatchers,
-                    outputChannel,
-                    customTypeKey 
-                });
+                    if (!candidateBasePath.length) continue;
+
+                    data = await loadTargetModule({
+                        targetName,
+                        triggerKey: candidate.triggerKey,
+                        basePath: candidateBasePath,
+                        triggerType: candidate.triggerType,
+                        fileWatchers,
+                        outputChannel,
+                        customTypeKey
+                    });
+
+                    if (data) {
+                        resolvedTriggerKey = candidate.triggerKey;
+                        resolvedTriggerType = candidate.triggerType;
+                        basePath = candidateBasePath;
+                        break;
+                    }
+                }
 
                 if (!data) {
-                    log(outputChannel, `❌ No data found for ${triggerType} "${triggerKey}" with target "${targetName}"`);
+                    log(outputChannel, `❌ No data found for generic target "${targetName}"`);
                     return;
                 }
 
@@ -220,13 +277,14 @@ async function activate(context) {
 
                 let hoverContent = await buildHoverContent({
                     targetName,
-                    triggerKey,
+                    triggerKey: resolvedTriggerKey,
                     basePath: resolvedBasePath,
                     data,
-                    triggerType,
+                    triggerType: resolvedTriggerType,
                     outputChannel,
                     postfixCommand,
-                    contentFunctionLocation
+                    contentFunctionLocation,
+                    propertyName
                 });
 
                 hoverContent = replaceSchemasWithLinks({

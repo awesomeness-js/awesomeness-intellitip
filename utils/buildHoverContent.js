@@ -17,7 +17,8 @@ async function buildHoverContent({
     triggerType,
     outputChannel,
     postfixCommand,
-    contentFunctionLocation
+    contentFunctionLocation,
+    propertyName
 }) {
     
     let targetArray = Array.isArray(targetName);
@@ -139,7 +140,8 @@ async function buildHoverContent({
             data,
             triggerType,
             outputChannel,
-            postfixCommand
+            postfixCommand,
+            propertyName
         });
     }
 

@@ -1,317 +1,221 @@
-# Awesomeness Tooltip - VS Code Extension
+# Awesomeness Intellitip
 
-## 📌 Overview
-Awesomeness Tooltip is a Visual Studio Code extension that provides helpful tooltips for JavaScript files. It extracts schema information based on configured path aliases and displays detailed hover tooltips, making it easier to understand object structures and relationships within your project.
+## 🤯 Imagine a custom readme.md was available in a tooltip...
 
-Provides way more information than the default hover, intellisense, or peek definition (even with TS).
+**Why was this not created before?** ... whatever I did it.
+
+Tooltips should show **meaningful** documentation for whatever you are working with not just a type signature. This extension is a companion to [Awesomeness JS](https://awesomeness.js), but it can be used in any project.
+
+> ...
+> **(Quick plug for Awesomeness JS:)** it's a true **full stack** JavaScript framework for building modern web apps ready to be deployed as PWA's. Front-End, Back-End, API, API Docs, SDK, MCP Server, Agents... It's a no BS vanilla JS library with no frameworks, build steps, or transpilation. The key to success is organization and schemas every dev shares. **Everything boils down to schemas**
+> ...
+
+---
+
+## 📐 Frame of Reference
+
+When developing large enterprise applications, using the same language and meaning for a term is critical for speed, success, communication, and debugging. 
+
+That's why people got tricked into using TS. They think they are safe, but TS does not exist in the runtime so you are really just slowing developers down and letting them get away with bad habits. The world does not need TS, we need to make sure everyone knows what `words` are _special_ and what they mean.
+
+---
+
+## What does this extension do?
+
+Basically it allows you to hover over anything and see custom docs.
+
+Works for
+- Schemas
+- Front-end components
+- Back-end functions
+
+The key again, is the entire team can depend on special words like `user` or `profilePage` and know exactly what they mean and how to use it. **Full blown pretty UI docs, not just a type signature or JSDoc markup.**
+
+---
+
+## 🚀 Basic Config
+
+Let's assume you have a basic config...
+
+For the awesomeness framework all files should live in the `.awesomeness` folder, but you can put your config anywhere. The important thing is to tell the extension where to find it.
 
 
-## 🥱 TLDR;
-
-If you want to provide 100% custom tooltips based on custom MD, or Awesomeness Schema files or Awesomeness _info.js files, this is the extension for you.
-
-You can do something like this:
-
-Anytime the cursor hovers over a line that has `ui.anything()` you will get a custom tool tip! (**Yeah it can be 100% MD**)
-
-
-
-## 🚀 Features
-
-📝 **Hover Tooltips**: Displays structured tooltips with schema descriptions, properties, edges, and related key-value pairs.
-
-🔄 **Dynamic Schema Loading**: Fetches schema information dynamically from configured paths.
-
-🖥 **Customizable Configuration**: Supports custom path mappings for schema locations.
-
-📡 **Efficient Caching & Watching**: Utilizes caching and file watching to enhance performance.
-
-📢 **Debugging Output Channel**: Provides logs in a dedicated "Awesomeness Tooltip" output channel.
-
-
-## 🛠️ Configuration
-
-Project config file: `.awesomeness/config.js`
-
-*As a fallback, you can also configure via: `settings.json`
-But this makes it so you cannot have a dynamic tipMap for site-specific components.*
-
-### Example .awesomeness/config.js
+#### Example `.awesomeness/config.js`
 
 ```js
 export default {
-
-    // Enable debug logging
-    // turns on Awesomeness Intellitip output channel
-    // turns on additional Awesomeness Server logs
-    debug: true,
-
-    siteDir__URL: new URL('../sites/', import.meta.url),
-    
+    makeSchemaWordsSpecial: true,  // default is true (but here for clarity)
     schemas: {
-      "@schemas": "schemas",
-      "app.create": "schemas"
+        "@schemas": "schemas",
     },
-
-
-    // can be strings 
-    // arrays of strings
-    // arrays of URLs
-    // or a function that returns an array of URLs
-
-    // each key is used as the trigger word in your code
-
     tipMap: {
         app: "api/functions",
-        ui:  ({ site }) => {
-            // build a site-specific base URL relative to the config file
-            const siteURL = new URL(`../sites/${site}/`, import.meta.url);
-            return [
-            new URL('./components/', siteURL), // site-first
-            new URL('../awesomeness-ui/components/', import.meta.url) // fallback
-            ];
-        }
-    },
+        ui: ({ site }) => {
 
+            return [
+                new URL(`../sites/${site}/components/`, import.meta.url),
+                new URL(`../awesomeness-ui/components/`, import.meta.url),
+            ];
+           
+        }
+    }
 };
 ```
 
-### Trigger Patterns
+`tipMap` maps the word you hover from to the folder, folders, or function that can find its docs.
 
-Trigger keys can now match in 4 ways:
-- Prefix lookup for dotted access (example: `ui.card.grid()`)
-- Command style with a space (example: `@schemas user`)
-- Function-call first argument lookup (examples: `app.create('user', data)`, `app.update(backgroundJob)`)
-- Awaited function assignment lookup (example: `const user = await app.get(id)`)
-- Regex literal keys for custom patterns
+- Use a string for one static lookup folder.
+- Use an array when several static folders should be searched in order.
+- Use a function when the lookup folders depend on the current file, such as site-specific component overrides.
 
-Function-call lookup uses the configured key as the function name, so this works:
+The function form receives `{ site }` and can return a string, a `URL`, or an array of strings and `URL`s:
 
 ```js
-schemas: {
-  "app.create": "schemas",
-  "app.get": "schemas"
-}
+const componentLocations = ({ site }) => {
+    return [
+        new URL(`../sites/${site}/components/`, import.meta.url),
+        new URL(`../awesomeness-ui/components-private/`, import.meta.url),
+        new URL(`../awesomeness-ui/components/`, import.meta.url),
+    ];
+};
 ```
 
-With `"app.get": "schemas"`, hovering `user` in `const user = await app.get(id)` looks up the `user` schema. The argument (`id`) is not used for that assignment lookup.
+#### What does this do?
 
-Regex keys are supported with a JavaScript regex-literal string format: `/pattern/flags`.
+In the config above you told it your library/object/SDK is called `app`.
 
-Use capture group 1, or a named group called `target`, as the matched schema name.
+If you hover over `app` it will look in the `api/functions` folder and show the readme.md for the function you are hovering over.
+
+**Quick note:** it will use readme.md by default but if you have multiple files in the folder it can use file specific md files too.
+
+For example: `app.user.get` will look for both 
+- `/api/functions/user/get/readme.md`
+-  `/api/functions/user/get.md`
+
+If you hover over `ui` it will look in the `site specific` components folder first, if it doesn't find it there, it will look in the common `awesomeness-ui/components` folder second, and so on.
+
+This allows you to have a common set of components, but also allow for site specific overrides.
+
+
+#### 🕺 Example: 
 
 ```js
-schemas: {
-  "/app\\.create\\(\\s*['\"`]([^'\"`]+)['\"`]/": "schemas",
-  "/app\\.create\\(\\s*['\"`](?<target>[^'\"`]+)['\"`]/": "schemas"
-}
+const user = app.create('user', user);
 ```
 
-**How dynamic tipMap function works**
+#### Hovering over app.user.`get`
+Because `get` has its own .md, located at `/api/functions/user/get.md` hovering over `get` will show:
 
-Function are passes an object with the `site` parameter.
+![schema-example](./images/user-get.png)
 
-If you are in a file within `siteDir__URL`, 
-e.g. `../sites/mysite/pages/home.js`, 
-the `site` parameter will be `mysite`.
 
-This way you can have site-specific components loaded first, and then fallback to shared components.
 
-### Node Modules Metadata Discovery
+#### 🧙 Hovering over `user` (a schema)
 
-The extension can now load metadata from installed libraries that expose a `.awesomeness` folder.
+With `makeSchemaWordsSpecial: true` hovering over `user` will show the schema documentation from `/schemas/user.js`:
 
-Default behavior:
-- Discovery mode: `dependencies-only`
-- Precedence: `local-first`
-- Trigger syntax: unchanged
-
-When a base path is configured as a relative path (for example `schemas` or `components`), lookup candidates are expanded in this order:
-1. `<workspace>/<basePath>`
-2. `<workspace>/.awesomeness/<basePath>`
-3. `<workspace>/node_modules/<package>/.awesomeness/<basePath>` for direct dependencies
-
-Scoped packages are supported:
-- `<workspace>/node_modules/@scope/<package>/.awesomeness/<basePath>`
-
-If the same target exists in multiple places, the first match wins based on `resolutionOrder`.
-
-### Settings
-
-```json
-{
-  "awesomeness.enableNodeModulesAwesomeness": true,
-  "awesomeness.nodeModulesDiscovery": "dependencies-only",
-  "awesomeness.resolutionOrder": "local-first"
-}
+if you had makeSpecialWords = `false`... Intellitip still works but you need to make a comment like this
+```js
+// @schemas user
+const user = app.user.get(id);
 ```
 
-`nodeModulesDiscovery` values:
-- `off`: disable node_modules discovery
-- `dependencies-only`: check only direct dependencies from `package.json` (recommended)
-- `deep-scan`: recursively scan `node_modules` for `.awesomeness` directories (slower)
+**How they render:** Schemas are not driven by .md files, but by the schema definition itself. (one less step for pretty docs). See example schema: [./_schemaTemplate.js](_schemaTemplate.js)
 
+#### 👀 What does tooltip look like for a `Schema`?
 
-## 🎯 Usage
+![schema-example](./images/schema-example.png)
 
-Each component, be it an `awesomeness-ui` component or `awesomeness-api/routes` should live in its own folder with either a `readme.md` or `_info.js` file to describe it.
+Schemas can include these special keys, each will be rendered in a special way as you can see in the example above.
+
+- `name`: schema name
+- `description`: schema description
+- `properties`: property definitions
+- `edges`: connected vertices
+- `relatedKVs`: related key-value pairs
 
 
 ---
 
+## More Cool Examples
 
-### 📚 File Resolution Priority
 
-For **components** (like those in `awesomeness-ui/components` or `api/functions`):
+### 🤖 MD Files and Code examples
 
-- If the reference is shallow (e.g. `ui._example()`):
-  1. `awesomeness-ui/example/readme.md`
-  2. `awesomeness-ui/example/_info.js`
+Copy and paste code example are not just good for human developers, it also works great with LLM's and agents.
 
-- If the reference is nested (e.g. `ui._example.subComponent()`):
-  1. `awesomeness-ui/example/subComponent.md`
-  2. `awesomeness-ui/example/subComponent/readme.md`
-  3. `awesomeness-ui/example/subComponent/_info.js`
-
-For **schemas** (like those in `schemas`), the lookup directly resolves to:
-- `schemas/mySchema.js`
+![alt text](./images/application-create.png)
 
 
 
-### 🧑‍💻 Example Usage
-```js
-// FRONT END
-import ui from '#ui';
+## 🎨 For UI Components
 
-// will look for:
-// 1. awesomeness-ui/example/readme.md
-// 2. awesomeness-ui/example/_info.js
-const test = ui._example();
+Wouldn't it be nice if you could hover over a component and see its documentation **and examples**?
 
-// will look for:
-// 1. awesomeness-ui/example/subComponent.md
-// 2. awesomeness-ui/example/subComponent/readme.md
-// 3. awesomeness-ui/example/subComponent/_info.js
-const testGrid = ui._example.subComponent();
-
-// will look for:
-// 1. awesomeness-ui/example/subComponent/deep.md
-// 2. awesomeness-ui/example/subComponent/deep/readme.md
-// 3. awesomeness-ui/example/subComponent/deep/_info.js
-const $subDeep = ui._example.subComponent.deep();
-```
-
-### Basic Example
-![](./images/example.png)
-
-### Backend Component
-![](./images/component-backend.png)
-
-### Component with Image
-![](./images/component-with-image.png)
+![Component with Image](./images/component-with-image.png)
 
 
-## 📑 Schemas
-While Schemas can be any object structure, the following keys have special meaning and display in the hover:
- - **name**: the name of a schema
- - **description**: the description of a schema
- - **properties**: the properties of a schema
- - **edges**: the edges of a schema (vertices that are connected to this schema)
- - **relatedKVs**: the key-value pairs related to this schema
+---
 
-See [example schema](examples/schemas/user.js) for a full example.
+## Advanced - Not recommended
 
-# Example Hover Display
-
-### user
-A user of an application
+Regex triggers let you attach documentation to text that does not follow a fixed dot-separated path. Use a regex literal as a key in `tipMap` or `schemas`. The first capture group is used as the target name; for clearer patterns, use a named `target` capture group instead.
 
 ```js
-
-user { 
-    id: uuid
-    first: string
-    last: string
-    phone: array
-    email: array
-    password: string
- }
-
+export default {
+    tipMap: {
+        "/\\bapp\\.([A-Za-z_$][\\w$]*)\\s*\\(/": "api/functions",
+        "/\\bservice\\.(?<target>[A-Za-z_$][\\w$]*)\\b/": "api/services",
+    },
+};
 ```
-![](./images/schema.png)
-![](./images/schema2.png)
 
-### Details
+With this configuration, hovering over `create` in either example looks up the matching documentation target:
+
 ```js
-{
-  id: {
-    type: uuid,
-    description: "the id of the vertex",
-    default: () => { return uuid(); },
-    immutable: true,
-    required: true
-  },
-  first: {
-    type: string,
-    description: "first name of the user",
-    default: null,
-    minLength: 1,
-    maxLength: 100
-  },
-  last: {
-    type: string,
-    description: "last name of the user",
-    default: null,
-    minLength: 1,
-    maxLength: 100
-  },
-  phone: {
-    type: array,
-    description: "phone numbers of the user",
-    items: {
-      $ref: "phone"
-    }
-  },
-  email: {
-    type: array,
-    description: "email addresses of the user",
-    items: {
-      $ref: "email"
-    }
-  },
-  password: {
-    type: string,
-    description: "hashed password of the user",
-    default: null
-  }
-}
-
+app.create(user);
+service.authenticate(user);
 ```
 
-![](./images/schema-details.png)
+The first pattern captures `create` with `([A-Za-z_$][\\w$]*)`. The second captures `authenticate` with the named group `(?<target>...)`. The regex flags are optional, and the extension automatically enables the global (`g`) flag so multiple matches on the same line are supported. The cursor must be over the captured target for the tooltip to appear.
 
-### Edges
-user -- friend --> user
+Regex keys can also be used for schema mappings:
 
-![](./images/schema-edges.png)
-
-
-### Related KVs
-
-```js 
-user::{{ application.id }}::email::{{ user.email }}
-{
-  type: string,
-  description: "uuid of the user",
-  example: "00000000-0000-0000-0000-000000000000"
-}
-
-user::{{ application.id }}::phone::{{ user.phone }}
-{
-  type: string,
-  description: "uuid of the user",
-  example: "00000000-0000-0000-0000-000000000000"
-}
+```js
+export default {
+    schemas: {
+        "/\\bmodel\\.(?<target>[A-Za-z_$][\\w$]*)\\b/": "schemas",
+    },
+};
 ```
 
-![](./images/schema-kv.png)
+---
+
+## Philosophy
+
+### Shared meaning beats clever code
+
+Most software teams do not fail because nobody can write a function. They fail because the team stops sharing the same meaning for the words in that function. Is a `user` an account, a person, or an authenticated session? Is `profile` a database record, an API response, or a screen model? When those answers live in people's heads, every new developer, feature, and integration creates another opportunity for the system to drift.
+
+Schemas make meaning explicit. They give the team a shared vocabulary for the data, relationships, properties, and rules that the product is built around. That vocabulary should be visible in the code, available at runtime, and easy to discover while someone is working. Documentation is not a separate report that gets written after the system; it is part of the system's structure.
+
+### The startup version of technical debt
+
+Startups commonly run into the same problems:
+
+- The founder is the only person who knows what important words mean.
+- A quick prototype grows into a product without a stable hierarchy.
+- Every team invents its own names for the same concept.
+- Documentation is postponed until onboarding, debugging, and support become painful.
+- A type checker gives the team confidence while the runtime behavior and business meaning remain unclear.
+
+Schema-driven documentation attacks these problems at their source. It turns tribal knowledge into shared project language, gives each concept a clear home, and makes the intended relationships discoverable. That reduces the cost of onboarding, makes code review more precise, and helps frontend, backend, API, SDK, and documentation teams work from the same definitions.
+
+### Organization is a safety feature
+
+Clear organization and hierarchy are not cosmetic preferences. They are how a growing system preserves context. A predictable folder structure, consistent names, and deliberate parent-child relationships tell people where a concept belongs and how it connects to everything around it. Once that structure is in place, tools like Intellitip can turn it into immediate, contextual documentation.
+
+TypeScript can tell you that a value is supposed to have a shape at compile time. It cannot, by itself, tell the team what `user` means, whether the data came from the correct API, whether the runtime payload is valid, or where the concept belongs in the product hierarchy. Type safety is useful, but it is not a substitute for shared semantics, runtime validation, or disciplined organization. A beautifully typed mess is still a mess.
+
+Do not be lazy about this part. Name things carefully. Put them where they belong. Define the relationships. Document the concepts that everyone depends on. Organize your shit before the codebase gets large enough to organize you.
+
