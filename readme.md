@@ -31,7 +31,7 @@ Works for
 
 The key again, is the entire team can depend on special words like `user` or `profilePage` and know exactly what they mean and how to use it. **Full blown pretty UI docs, not just a type signature or JSDoc markup.**
 
-
+![demo](/demo.gif)
 
 ---
 
